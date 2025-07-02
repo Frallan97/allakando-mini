@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Star, Clock, BookOpen, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,58 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTutors, api } from '@/lib/api';
+import { useTutors, useBulkAvailability } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 
-
-// Custom hook to get all tutors with availability for a date
-const useTutorsWithAvailability = (tutors, selectedDate) => {
-  const [availableTutors, setAvailableTutors] = useState([]);
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-
-  // Memoize the tutors array to prevent unnecessary re-renders
-  const memoizedTutors = useMemo(() => tutors, [tutors.map(t => t.id).join(',')]);
-
-  // Memoize the checkAvailability function
-  const checkAvailability = useCallback(async () => {
-    if (!selectedDate) {
-      setAvailableTutors(memoizedTutors);
-      setIsCheckingAvailability(false);
-      return;
-    }
-
-    setIsCheckingAvailability(true);
-    
-    const available = [];
-    
-    for (const tutor of memoizedTutors) {
-      try {
-        const data = await api.getTutorAvailability(tutor.id);
-        
-        const hasAvailability = data.slots.some(slot => {
-          const slotDate = new Date(slot.start_time).toISOString().split('T')[0];
-          return slotDate === selectedDate && !slot.is_booked;
-        });
-        
-        if (hasAvailability) {
-          available.push(tutor);
-        }
-      } catch (error) {
-        console.error(`Error checking availability for tutor ${tutor.id}:`, error);
-        continue;
-      }
-    }
-    
-    setAvailableTutors(available);
-    setIsCheckingAvailability(false);
-  }, [memoizedTutors, selectedDate]);
-
-  useEffect(() => {
-    checkAvailability();
-  }, [checkAvailability]);
-
-  return { availableTutors, isCheckingAvailability };
-};
 
 const TutorsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,21 +17,6 @@ const TutorsPage = () => {
   const [selectedDate, setSelectedDate] = useState('any');
 
   const { data: tutorsData, isLoading, error } = useTutors();
-
-  // Transform API data to match the original structure
-  const tutors = tutorsData?.tutors.map(tutor => ({
-    id: tutor.id,
-    name: tutor.name,
-    email: tutor.email,
-    subjects: tutor.subjects || ['Mathematics', 'Physics'],
-    rating: tutor.rating || 4.8,
-    experience: `${tutor.experience_years || 3} years`,
-    hourlyRate: tutor.hourly_rate || 45,
-    availableSlots: 8, // Default slots since not in API
-    description: tutor.about || 'Experienced tutor with a passion for helping students excel in their studies.',
-  })) || [];
-
-  const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];
 
   // Generate available dates (today + 2 weeks)
   const generateAvailableDates = () => {
@@ -103,9 +39,56 @@ const TutorsPage = () => {
   };
 
   const availableDates = generateAvailableDates();
+  
+  // Pre-load 2 weeks of availability data
+  const today = new Date().toISOString().split('T')[0];
+  const twoWeeksFromNow = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const { 
+    data: bulkAvailabilityData, 
+    isLoading: isLoadingAvailability 
+  } = useBulkAvailability(today, twoWeeksFromNow);
 
-  // Get tutors with availability for selected date
-  const { availableTutors, isCheckingAvailability } = useTutorsWithAvailability(tutors, selectedDate === 'any' ? null : selectedDate);
+  // Transform API data to match the original structure
+  const tutors = tutorsData?.tutors.map(tutor => ({
+    id: tutor.id,
+    name: tutor.name,
+    email: tutor.email,
+    subjects: tutor.subjects || ['Mathematics', 'Physics'],
+    rating: tutor.rating || 4.8,
+    experience: `${tutor.experience_years || 3} years`,
+    hourlyRate: tutor.hourly_rate || 45,
+    availableSlots: 8, // Default slots since not in API
+    description: tutor.about || 'Experienced tutor with a passion for helping students excel in their studies.',
+  })) || [];
+
+  // Get available tutors for selected date using pre-loaded data
+  const availableTutors = useMemo(() => {
+    if (!tutors.length) return [];
+    
+    // If no date filter, return all tutors
+    if (selectedDate === 'any') {
+      return tutors;
+    }
+
+    // If we don't have availability data yet, return empty array
+    if (!bulkAvailabilityData) {
+      return [];
+    }
+
+    // Filter tutors based on availability for the selected date
+    const availableTutorIds = new Set();
+    
+    bulkAvailabilityData.availability.forEach(tutorAvailability => {
+      const dateAvailability = tutorAvailability.dates[selectedDate];
+      if (dateAvailability && dateAvailability.has_availability) {
+        availableTutorIds.add(tutorAvailability.tutor_id);
+      }
+    });
+
+    return tutors.filter(tutor => availableTutorIds.has(tutor.id));
+  }, [tutors, selectedDate, bulkAvailabilityData]);
+
+  const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];
 
   // Filter tutors based on search term, subject, and date availability
   const filteredTutors = availableTutors
@@ -214,7 +197,7 @@ const TutorsPage = () => {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600">
-            {isCheckingAvailability ? (
+            {isLoadingAvailability && selectedDate !== 'any' ? (
               <span>Checking availability...</span>
             ) : (
               <>
@@ -238,7 +221,7 @@ const TutorsPage = () => {
           <div className="text-center py-12">
             <p className="text-gray-600">Loading tutors...</p>
           </div>
-        ) : isCheckingAvailability ? (
+        ) : isLoadingAvailability && selectedDate !== 'any' ? (
           <div className="text-center py-12">
             <p className="text-gray-600">Checking tutor availability...</p>
           </div>
