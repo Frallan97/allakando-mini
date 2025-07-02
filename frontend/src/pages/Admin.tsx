@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useTutors, useCreateTutor, useRecentBookings } from '@/lib/api';
+import { useAdminTutorTransforms, useAdminBookingTransforms } from '@/hooks/useAdminTransforms';
 import UserMenu from '@/components/UserMenu';
 
 const AdminPage = () => {
@@ -30,30 +31,9 @@ const AdminPage = () => {
   const { data: recentBookingsData, isLoading: recentBookingsLoading } = useRecentBookings(5);
   const createTutorMutation = useCreateTutor();
 
-  // Transform API data to match the original structure
-  const tutors = tutorsData?.tutors.map(tutor => ({
-    ...tutor, // Keep all original API fields
-    id: tutor.id,
-    name: tutor.name,
-    email: tutor.email,
-    subjects: tutor.subjects || ['Mathematics', 'Physics'],
-    totalSessions: 25, // Default sessions since not in API
-    availableSlots: 8, // Default slots since not in API
-    rating: tutor.rating || 4.8,
-    hourlyRate: tutor.hourly_rate || 45,
-    experience: `${tutor.experience_years || 3} years`
-  })) || [];
-
-  // Transform recent bookings data
-  const recentBookings = recentBookingsData?.bookings.map(booking => ({
-    id: booking.id,
-    student: booking.student.name,
-    tutor: booking.tutor.name,
-    subject: 'General', // Default subject since not in API
-    date: new Date(booking.start_time).toISOString().split('T')[0],
-    time: new Date(booking.start_time).toTimeString().slice(0, 5),
-    status: 'confirmed' // Default status since not in API
-  })) || [];
+  // Transform data using custom hooks
+  const tutors = useAdminTutorTransforms(tutorsData);
+  const recentBookings = useAdminBookingTransforms(recentBookingsData);
 
   const stats = [
     { icon: Users, label: 'Total Tutors', value: tutors.length },

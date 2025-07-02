@@ -15,7 +15,8 @@ const useTutorsWithAvailability = (tutors, selectedDate) => {
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
   // Memoize the tutors array to prevent unnecessary re-renders
-  const memoizedTutors = useMemo(() => tutors, [tutors.map(t => t.id).join(',')]);
+  const tutorIds = useMemo(() => tutors.map(t => t.id).join(','), [tutors]);
+  const memoizedTutors = useMemo(() => tutors, [tutorIds]);
 
   // Memoize the checkAvailability function
   const checkAvailability = useCallback(async () => {
