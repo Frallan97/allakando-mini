@@ -41,9 +41,9 @@ const StudentDashboardPage = () => {
 
   const formatTime = (timeString) => {
     return new Date(`2000-01-01T${timeString}:00`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: false
     });
   };
 
@@ -202,9 +202,6 @@ const StudentDashboardPage = () => {
                           </div>
                           <div className="flex items-center space-x-3">
                             {getStatusBadge(booking.status)}
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
                           </div>
                         </div>
                       ))}
@@ -235,9 +232,6 @@ const StudentDashboardPage = () => {
                           </div>
                           <div className="flex items-center space-x-3">
                             {getStatusBadge(booking.status)}
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
                           </div>
                         </div>
                       ))}

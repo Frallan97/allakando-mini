@@ -56,6 +56,11 @@ const HomePage = () => {
                   Admin
                 </Button>
               </Link>
+              <Link to="/tutor-admin">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600 text-sm">
+                  Tutor Admin
+                </Button>
+              </Link>
               <UserMenu />
             </div>
           </div>

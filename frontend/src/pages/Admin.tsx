@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { useTutors, useCreateTutor, useAddAvailability, useRecentBookings } from '@/lib/api';
+import { useTutors, useCreateTutor, useRecentBookings } from '@/lib/api';
 import UserMenu from '@/components/UserMenu';
 
 const AdminPage = () => {
@@ -22,17 +22,17 @@ const AdminPage = () => {
   const [newTutorHourlyRate, setNewTutorHourlyRate] = useState('45');
   const [newTutorRating, setNewTutorRating] = useState('4.8');
   const [newTutorExperience, setNewTutorExperience] = useState('3');
-  const [selectedTutor, setSelectedTutor] = useState('');
-  const [availabilityDate, setAvailabilityDate] = useState('');
-  const [availabilityTime, setAvailabilityTime] = useState('');
+  const [isAddTutorDialogOpen, setIsAddTutorDialogOpen] = useState(false);
+  const [selectedTutorForDetails, setSelectedTutorForDetails] = useState<Tutor | null>(null);
+  const [isTutorDetailsDialogOpen, setIsTutorDetailsDialogOpen] = useState(false);
 
   const { data: tutorsData, isLoading, error } = useTutors();
   const { data: recentBookingsData, isLoading: recentBookingsLoading } = useRecentBookings(5);
   const createTutorMutation = useCreateTutor();
-  const addAvailabilityMutation = useAddAvailability();
 
   // Transform API data to match the original structure
   const tutors = tutorsData?.tutors.map(tutor => ({
+    ...tutor, // Keep all original API fields
     id: tutor.id,
     name: tutor.name,
     email: tutor.email,
@@ -90,35 +90,12 @@ const AdminPage = () => {
       setNewTutorRating('4.8');
       setNewTutorExperience('3');
       
+      // Close the dialog
+      setIsAddTutorDialogOpen(false);
+      
       toast.success('Tutor created successfully!');
     } catch (error) {
       toast.error('Failed to create tutor');
-    }
-  };
-
-  const handleAddAvailability = async () => {
-    if (!selectedTutor || !availabilityDate || !availabilityTime) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    try {
-      const startTime = new Date(`${availabilityDate}T${availabilityTime}`);
-      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour later
-
-      await addAvailabilityMutation.mutateAsync({
-        tutorId: selectedTutor,
-        data: {
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString()
-        }
-      });
-      setSelectedTutor('');
-      setAvailabilityDate('');
-      setAvailabilityTime('');
-      toast.success('Availability slot added successfully!');
-    } catch (error) {
-      toast.error('Failed to add availability');
     }
   };
 
@@ -141,6 +118,11 @@ const AdminPage = () => {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const handleViewTutorDetails = (tutor: Tutor) => {
+    setSelectedTutorForDetails(tutor);
+    setIsTutorDetailsDialogOpen(true);
   };
 
   if (error) {
@@ -184,6 +166,11 @@ const AdminPage = () => {
               <Link to="/admin">
                 <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
                   Admin
+                </Button>
+              </Link>
+              <Link to="/tutor-admin">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Tutor Admin
                 </Button>
               </Link>
               <UserMenu />
@@ -232,7 +219,7 @@ const AdminPage = () => {
                     <Users className="h-6 w-6 mr-2 text-blue-600" />
                     Tutors Management
                   </CardTitle>
-                  <Dialog>
+                  <Dialog open={isAddTutorDialogOpen} onOpenChange={setIsAddTutorDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Plus className="h-4 w-4 mr-2" />
@@ -380,7 +367,7 @@ const AdminPage = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge variant="secondary">{tutor.subjects[0]}</Badge>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleViewTutorDetails(tutor)}>
                             View Details
                           </Button>
                         </div>
@@ -394,61 +381,6 @@ const AdminPage = () => {
 
           {/* Quick Actions & Recent Activity */}
           <div className="space-y-6">
-            {/* Add Availability */}
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900 flex items-center">
-                  <Calendar className="h-5 w-5 mr-2 text-blue-600" />
-                  Add Availability
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="tutor">Select Tutor</Label>
-                    <select
-                      id="tutor"
-                      value={selectedTutor}
-                      onChange={(e) => setSelectedTutor(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Choose a tutor</option>
-                      {tutors.map((tutor) => (
-                        <option key={tutor.id} value={tutor.id}>
-                          {tutor.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="date">Date</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={availabilityDate}
-                      onChange={(e) => setAvailabilityDate(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={availabilityTime}
-                      onChange={(e) => setAvailabilityTime(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleAddAvailability}
-                    disabled={addAvailabilityMutation.isPending}
-                    className="w-full"
-                  >
-                    {addAvailabilityMutation.isPending ? 'Adding...' : 'Add Slot'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Recent Bookings */}
             <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
@@ -488,6 +420,80 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Tutor Details Dialog */}
+      <Dialog open={isTutorDetailsDialogOpen} onOpenChange={setIsTutorDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tutor Details</DialogTitle>
+          </DialogHeader>
+          {selectedTutorForDetails && (
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">{selectedTutorForDetails.name}</h3>
+                  <p className="text-gray-600">{selectedTutorForDetails.email}</p>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <span className="text-sm text-gray-500">★ {selectedTutorForDetails.rating}</span>
+                    <span className="text-sm text-gray-500">${selectedTutorForDetails.hourlyRate}/hr</span>
+                    <span className="text-sm text-gray-500">{selectedTutorForDetails.experience}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subjects */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Subjects</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTutorForDetails.subjects.map((subject, index) => (
+                    <Badge key={index} variant="secondary">{subject}</Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* About */}
+              {selectedTutorForDetails.about && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">About</h4>
+                  <p className="text-gray-700">{selectedTutorForDetails.about}</p>
+                </div>
+              )}
+
+              {/* Qualifications */}
+              {selectedTutorForDetails.qualifications && selectedTutorForDetails.qualifications.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Qualifications</h4>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {selectedTutorForDetails.qualifications.map((qualification, index) => (
+                      <li key={index}>{qualification}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{selectedTutorForDetails.totalSessions}</div>
+                  <div className="text-sm text-gray-600">Total Sessions</div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{selectedTutorForDetails.availableSlots}</div>
+                  <div className="text-sm text-gray-600">Available Slots</div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">{selectedTutorForDetails.experience_years || 3}</div>
+                  <div className="text-sm text-gray-600">Years Experience</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

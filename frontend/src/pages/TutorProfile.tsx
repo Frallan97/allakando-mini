@@ -65,9 +65,9 @@ const TutorProfilePage = () => {
 
   const formatTime = (timeString) => {
     return new Date(`2000-01-01T${timeString}:00`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: false
     });
   };
 
@@ -180,6 +180,11 @@ const TutorProfilePage = () => {
               <Link to="/admin">
                 <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
                   Admin
+                </Button>
+              </Link>
+              <Link to="/tutor-admin">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Tutor Admin
                 </Button>
               </Link>
               <UserMenu />

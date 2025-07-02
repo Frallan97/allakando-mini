@@ -10,6 +10,7 @@ import Tutors from "./pages/Tutors";
 import TutorProfile from "./pages/TutorProfile";
 import StudentDashboard from "./pages/StudentDashboard";
 import Admin from "./pages/Admin";
+import TutorAdmin from "./pages/TutorAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/tutor/:id" element={<TutorProfile />} />
               <Route path="/student-dashboard" element={<StudentDashboard />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/tutor-admin" element={<TutorAdmin />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

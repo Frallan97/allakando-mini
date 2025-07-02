@@ -43,6 +43,11 @@ const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                 Admin
               </Button>
             </Link>
+            <Link to="/tutor-admin">
+              <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                Tutor Admin
+              </Button>
+            </Link>
             <UserMenu />
           </div>
         </div>
