@@ -118,13 +118,33 @@ All use UUID primary keys with proper foreign keys and constraints.
 
 ## Testing
 
-```bash
-# Terminal 1: Backend
-cd backend && npm start  # or: bun start
+### Backend Tests
 
-# Terminal 2: Frontend
-cd frontend && npm run dev  # or: bun dev
+```bash
+cd backend
+npm test
+# or: bun test
 ```
+
+### Frontend Tests
+
+```bash
+cd frontend
+npm test
+# or: bun test
+```
+
+### Run All Tests
+
+```bash
+# Terminal 1: Backend tests
+cd backend && npm test
+
+# Terminal 2: Frontend tests  
+cd frontend && npm test
+```
+
+## Manual Testing
 
 Open http://localhost:5173 and test the workflow:
 1. Create tutor → Add availability → Create student → Create booking
