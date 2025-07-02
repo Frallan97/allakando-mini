@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Star, Clock, BookOpen, ArrowLeft } from 'lucide-react';
@@ -7,81 +6,28 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTutors } from '@/lib/api';
+import UserMenu from '@/components/UserMenu';
 
 const TutorsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
 
-  // Mock data - will be replaced with API calls
-  const tutors = [
-    {
-      id: '1',
-      name: 'Alice Smith',
-      email: 'alice@example.com',
-      subjects: ['Mathematics', 'Physics'],
-      rating: 4.9,
-      experience: '5 years',
-      hourlyRate: 45,
-      availableSlots: 12,
-      description: 'Experienced math and physics tutor with a passion for helping students excel in STEM subjects.',
-    },
-    {
-      id: '2',
-      name: 'Bob Johnson',
-      email: 'bob@example.com',
-      subjects: ['English', 'Literature'],
-      rating: 4.8,
-      experience: '3 years',
-      hourlyRate: 35,
-      availableSlots: 8,
-      description: 'English literature specialist focused on creative writing and critical analysis.',
-    },
-    {
-      id: '3',
-      name: 'Carol Davis',
-      email: 'carol@example.com',
-      subjects: ['Chemistry', 'Biology'],
-      rating: 4.7,
-      experience: '7 years',
-      hourlyRate: 50,
-      availableSlots: 15,
-      description: 'Science tutor with extensive lab experience and research background.',
-    },
-    {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david@example.com',
-      subjects: ['Computer Science', 'Programming'],
-      rating: 4.9,
-      experience: '4 years',
-      hourlyRate: 60,
-      availableSlots: 6,
-      description: 'Software engineer turned tutor, specializing in Python, JavaScript, and algorithms.',
-    },
-    {
-      id: '5',
-      name: 'Emma Brown',
-      email: 'emma@example.com',
-      subjects: ['Spanish', 'French'],
-      rating: 4.6,
-      experience: '6 years',
-      hourlyRate: 40,
-      availableSlots: 10,
-      description: 'Native bilingual speaker offering immersive language learning experiences.',
-    },
-    {
-      id: '6',
-      name: 'Frank Miller',
-      email: 'frank@example.com',
-      subjects: ['History', 'Social Studies'],
-      rating: 4.8,
-      experience: '8 years',
-      hourlyRate: 38,
-      availableSlots: 14,
-      description: 'History professor with expertise in world history and political science.',
-    }
-  ];
+  const { data: tutorsData, isLoading, error } = useTutors();
+
+  // Transform API data to match the original structure
+  const tutors = tutorsData?.tutors.map(tutor => ({
+    id: tutor.id,
+    name: tutor.name,
+    email: tutor.email,
+    subjects: ['Mathematics', 'Physics'], // Default subjects since not in API
+    rating: 4.8, // Default rating since not in API
+    experience: '3 years', // Default experience since not in API
+    hourlyRate: 45, // Default rate since not in API
+    availableSlots: 8, // Default slots since not in API
+    description: 'Experienced tutor with a passion for helping students excel in their studies.',
+  })) || [];
 
   const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];
 
@@ -106,25 +52,39 @@ const TutorsPage = () => {
       }
     });
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-red-600">Error loading tutors: {error.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <BookOpen className="h-8 w-8 text-blue-600" />
-                <span className="text-2xl font-bold text-gray-900">TutorHub</span>
-              </div>
+            <div className="flex items-center space-x-2">
+              <BookOpen className="h-8 w-8 text-blue-600" />
+              <span className="text-2xl font-bold text-gray-900">TutorHub</span>
             </div>
             <div className="flex items-center space-x-4">
+              <Link to="/">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Home
+                </Button>
+              </Link>
+              <Link to="/tutors">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Find Tutors
+                </Button>
+              </Link>
               <Link to="/student-dashboard">
                 <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
                   My Bookings
@@ -135,6 +95,7 @@ const TutorsPage = () => {
                   Admin
                 </Button>
               </Link>
+              <UserMenu />
             </div>
           </div>
         </div>
@@ -200,62 +161,65 @@ const TutorsPage = () => {
         </div>
 
         {/* Tutors Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTutors.map((tutor) => (
-            <Card key={tutor.id} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center space-x-4 mb-3">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl font-bold text-blue-600">
-                      {tutor.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl text-gray-900">{tutor.name}</CardTitle>
-                    <div className="flex items-center mt-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="text-sm text-gray-600 ml-1">{tutor.rating}</span>
-                      <span className="text-sm text-gray-400 ml-2">{tutor.experience}</span>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Loading tutors...</p>
+          </div>
+        ) : filteredTutors.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">No tutors found matching your criteria</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTutors.map((tutor) => (
+              <Card key={tutor.id} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {tutor.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl text-gray-900">{tutor.name}</CardTitle>
+                      <div className="flex items-center mt-1">
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                        <span className="text-sm text-gray-600 ml-1">{tutor.rating}</span>
+                        <span className="text-sm text-gray-400 ml-2">{tutor.experience}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <p className="text-sm text-gray-600 line-clamp-2">{tutor.description}</p>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {tutor.subjects.map((subject) => (
-                    <Badge key={subject} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                      {subject}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center text-gray-600">
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{tutor.availableSlots} slots available</span>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-gray-600 mb-4 line-clamp-2">{tutor.description}</p>
+                  
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {tutor.subjects.map((subject) => (
+                      <Badge key={subject} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                        {subject}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">${tutor.hourlyRate}</div>
-                    <div className="text-sm text-gray-500">per hour</div>
+                  
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center text-gray-600">
+                      <Clock className="h-4 w-4 mr-1" />
+                      <span className="text-sm">{tutor.availableSlots} slots available</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-gray-900">${tutor.hourlyRate}</div>
+                      <div className="text-sm text-gray-500">per hour</div>
+                    </div>
                   </div>
-                </div>
-                <Link to={`/tutor/${tutor.id}`}>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
-                    View Profile & Book
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredTutors.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No tutors found</h3>
-            <p className="text-gray-600">Try adjusting your search criteria or filters</p>
+                  
+                  <Link to={`/tutor/${tutor.id}`}>
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
+                      View Profile & Book
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>

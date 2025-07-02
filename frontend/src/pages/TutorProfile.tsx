@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Star, Clock, Mail, Calendar, CheckCircle, User } from 'lucide-react';
+import { ArrowLeft, Star, Clock, Mail, Calendar, CheckCircle, User, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,24 +8,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useTutors, useTutorAvailability, useCreateBooking } from '@/lib/api';
+import { useUser } from '@/contexts/UserContext';
+import UserMenu from '@/components/UserMenu';
 
 const TutorProfilePage = () => {
   const { id } = useParams();
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [studentName, setStudentName] = useState('');
-  const [studentEmail, setStudentEmail] = useState('');
   const [isBooking, setIsBooking] = useState(false);
 
-  // Mock data - will be replaced with API calls
-  const tutor = {
-    id: id,
-    name: 'Alice Smith',
-    email: 'alice@example.com',
-    subjects: ['Mathematics', 'Physics'],
-    rating: 4.9,
-    reviews: 127,
-    experience: '5 years',
-    hourlyRate: 45,
+  const { data: tutorsData, isLoading: tutorsLoading, error: tutorsError } = useTutors();
+  const { data: availabilityData, isLoading: availabilityLoading } = useTutorAvailability(id || '');
+  const createBookingMutation = useCreateBooking();
+  const { currentUser } = useUser();
+
+  // Find the specific tutor
+  const tutor = tutorsData?.tutors.find(t => t.id === id);
+  
+  // Transform API data to match the original structure
+  const tutorProfile = tutor ? {
+    id: tutor.id,
+    name: tutor.name,
+    email: tutor.email,
+    subjects: ['Mathematics', 'Physics'], // Default subjects since not in API
+    rating: 4.9, // Default rating since not in API
+    reviews: 127, // Default reviews since not in API
+    experience: '5 years', // Default experience since not in API
+    hourlyRate: 45, // Default rate since not in API
     description: 'Experienced math and physics tutor with a passion for helping students excel in STEM subjects. I hold a Master\'s degree in Applied Mathematics and have been teaching for over 5 years. My approach focuses on building strong fundamentals while making learning engaging and fun.',
     achievements: [
       'Master\'s in Applied Mathematics',
@@ -34,17 +42,15 @@ const TutorProfilePage = () => {
       '127 positive student reviews',
       'Specialized in exam preparation'
     ],
-    availableSlots: [
-      { id: '1', date: '2025-07-05', time: '14:00', duration: '1 hour' },
-      { id: '2', date: '2025-07-05', time: '15:00', duration: '1 hour' },
-      { id: '3', date: '2025-07-06', time: '10:00', duration: '1 hour' },
-      { id: '4', date: '2025-07-06', time: '11:00', duration: '1 hour' },
-      { id: '5', date: '2025-07-07', time: '14:00', duration: '1 hour' },
-      { id: '6', date: '2025-07-07', time: '16:00', duration: '1 hour' },
-      { id: '7', date: '2025-07-08', time: '09:00', duration: '1 hour' },
-      { id: '8', date: '2025-07-08', time: '13:00', duration: '1 hour' },
-    ]
-  };
+    availableSlots: availabilityData?.slots
+      .filter(slot => !slot.is_booked)
+      .map(slot => ({
+        id: slot.id,
+        date: new Date(slot.start_time).toISOString().split('T')[0],
+        time: new Date(slot.start_time).toTimeString().slice(0, 5),
+        duration: '1 hour'
+      })) || []
+  } : null;
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -65,22 +71,75 @@ const TutorProfilePage = () => {
   };
 
   const handleBooking = async () => {
-    if (!selectedSlot || !studentName || !studentEmail) {
-      toast.error('Please fill in all required fields');
+    if (!selectedSlot) {
+      toast.error('Please select a time slot');
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('No student account found. Please create a student account first.');
       return;
     }
 
     setIsBooking(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await createBookingMutation.mutateAsync({
+        student_id: currentUser.id,
+        slot_id: selectedSlot.id
+      });
+      
       toast.success('Session booked successfully! You will receive a confirmation email shortly.');
       setIsBooking(false);
       setSelectedSlot(null);
-      setStudentName('');
-      setStudentEmail('');
-    }, 2000);
+    } catch (error) {
+      toast.error('Failed to book session');
+      setIsBooking(false);
+    }
   };
+
+  if (tutorsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-red-600">Error loading tutor: {tutorsError.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (tutorsLoading || !tutorProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-gray-600">Loading tutor profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <User className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No student account found</h3>
+            <p className="text-gray-600 mb-4">Please create a student account first to book sessions</p>
+            <Link to="/admin">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                Go to Admin
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -88,12 +147,33 @@ const TutorProfilePage = () => {
       <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/tutors">
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Tutors
-              </Button>
-            </Link>
+            <div className="flex items-center space-x-2">
+              <BookOpen className="h-8 w-8 text-blue-600" />
+              <span className="text-2xl font-bold text-gray-900">TutorHub</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link to="/">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Home
+                </Button>
+              </Link>
+              <Link to="/tutors">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Find Tutors
+                </Button>
+              </Link>
+              <Link to="/student-dashboard">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  My Bookings
+                </Button>
+              </Link>
+              <Link to="/admin">
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  Admin
+                </Button>
+              </Link>
+              <UserMenu />
+            </div>
           </div>
         </div>
       </nav>
@@ -107,24 +187,24 @@ const TutorProfilePage = () => {
                 <div className="flex items-center space-x-6">
                   <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
                     <span className="text-4xl font-bold text-blue-600">
-                      {tutor.name.split(' ').map(n => n[0]).join('')}
+                      {tutorProfile.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div>
-                    <CardTitle className="text-3xl text-gray-900 mb-2">{tutor.name}</CardTitle>
+                    <CardTitle className="text-3xl text-gray-900 mb-2">{tutorProfile.name}</CardTitle>
                     <div className="flex items-center space-x-4 mb-3">
                       <div className="flex items-center">
                         <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                        <span className="text-lg font-semibold text-gray-700 ml-1">{tutor.rating}</span>
-                        <span className="text-gray-500 ml-1">({tutor.reviews} reviews)</span>
+                        <span className="text-lg font-semibold text-gray-700 ml-1">{tutorProfile.rating}</span>
+                        <span className="text-gray-500 ml-1">({tutorProfile.reviews} reviews)</span>
                       </div>
                       <Badge variant="outline" className="text-sm">
-                        {tutor.experience}
+                        {tutorProfile.experience}
                       </Badge>
                     </div>
                     <div className="flex items-center text-gray-600">
                       <Mail className="h-4 w-4 mr-2" />
-                      <span>{tutor.email}</span>
+                      <span>{tutorProfile.email}</span>
                     </div>
                   </div>
                 </div>
@@ -135,7 +215,7 @@ const TutorProfilePage = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Subjects</h3>
                   <div className="flex flex-wrap gap-2">
-                    {tutor.subjects.map((subject) => (
+                    {tutorProfile.subjects.map((subject) => (
                       <Badge key={subject} className="bg-blue-100 text-blue-800 hover:bg-blue-200">
                         {subject}
                       </Badge>
@@ -146,14 +226,14 @@ const TutorProfilePage = () => {
                 {/* Description */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">About</h3>
-                  <p className="text-gray-700 leading-relaxed">{tutor.description}</p>
+                  <p className="text-gray-700 leading-relaxed">{tutorProfile.description}</p>
                 </div>
 
                 {/* Achievements */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Qualifications & Achievements</h3>
                   <div className="space-y-2">
-                    {tutor.achievements.map((achievement, index) => (
+                    {tutorProfile.achievements.map((achievement, index) => (
                       <div key={index} className="flex items-center text-gray-700">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
                         <span>{achievement}</span>
@@ -174,7 +254,7 @@ const TutorProfilePage = () => {
                   Book a Session
                 </CardTitle>
                 <div className="text-center py-4">
-                  <div className="text-4xl font-bold text-gray-900">${tutor.hourlyRate}</div>
+                  <div className="text-4xl font-bold text-gray-900">${tutorProfile.hourlyRate}</div>
                   <div className="text-gray-500">per hour</div>
                 </div>
               </CardHeader>
@@ -182,84 +262,85 @@ const TutorProfilePage = () => {
               <CardContent className="space-y-4">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3">Available Time Slots</h4>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {tutor.availableSlots.map((slot) => (
-                      <Button
-                        key={slot.id}
-                        variant="outline"
-                        className={`w-full justify-start text-left p-3 h-auto ${
-                          selectedSlot?.id === slot.id 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                            : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                        onClick={() => setSelectedSlot(slot)}
-                      >
-                        <div>
-                          <div className="font-medium">{formatDate(slot.date)}</div>
-                          <div className="text-sm text-gray-600">
-                            {formatTime(slot.time)} • {slot.duration}
+                  {availabilityLoading ? (
+                    <div className="text-center py-4">
+                      <p className="text-gray-600">Loading availability...</p>
+                    </div>
+                  ) : tutorProfile.availableSlots.length === 0 ? (
+                    <div className="text-center py-4">
+                      <p className="text-gray-600">No available slots</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {tutorProfile.availableSlots.map((slot) => (
+                        <Button
+                          key={slot.id}
+                          variant="outline"
+                          className={`w-full justify-start text-left p-3 h-auto ${
+                            selectedSlot?.id === slot.id 
+                              ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                              : 'border-gray-200 hover:border-blue-300'
+                          }`}
+                          onClick={() => setSelectedSlot(slot)}
+                        >
+                          <div>
+                            <div className="font-medium">{formatDate(slot.date)}</div>
+                            <div className="text-sm text-gray-600">
+                              {formatTime(slot.time)} • {slot.duration}
+                            </div>
                           </div>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                      disabled={!selectedSlot}
-                    >
-                      {selectedSlot ? 'Book Selected Slot' : 'Select a Time Slot'}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Book Your Session</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      {selectedSlot && (
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-blue-900">Selected Session</h4>
-                          <p className="text-blue-700">{formatDate(selectedSlot.date)}</p>
-                          <p className="text-blue-700">{formatTime(selectedSlot.time)} • {selectedSlot.duration}</p>
-                          <p className="text-blue-700 font-semibold">Total: ${tutor.hourlyRate}</p>
-                        </div>
-                      )}
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="studentName">Your Name *</Label>
-                          <Input
-                            id="studentName"
-                            value={studentName}
-                            onChange={(e) => setStudentName(e.target.value)}
-                            placeholder="Enter your full name"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="studentEmail">Your Email *</Label>
-                          <Input
-                            id="studentEmail"
-                            type="email"
-                            value={studentEmail}
-                            onChange={(e) => setStudentEmail(e.target.value)}
-                            placeholder="Enter your email address"
-                          />
-                        </div>
-                      </div>
-
-                      <Button 
-                        onClick={handleBooking}
-                        disabled={isBooking || !selectedSlot || !studentName || !studentEmail}
-                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                      >
-                        {isBooking ? 'Booking...' : 'Confirm Booking'}
+                {selectedSlot && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
+                        Book This Slot
                       </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Book Session with {tutorProfile.name}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-2">Selected Time</h4>
+                          <p className="text-gray-700">
+                            {formatDate(selectedSlot.date)} at {formatTime(selectedSlot.time)}
+                          </p>
+                          <p className="text-sm text-gray-500">Duration: {selectedSlot.duration}</p>
+                        </div>
+                        
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-2">Booking for</h4>
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-semibold text-blue-600">
+                                {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{currentUser.name}</p>
+                              <p className="text-sm text-gray-600">{currentUser.email}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          onClick={handleBooking}
+                          disabled={isBooking}
+                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        >
+                          {isBooking ? 'Booking...' : 'Confirm Booking'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </CardContent>
             </Card>
           </div>
