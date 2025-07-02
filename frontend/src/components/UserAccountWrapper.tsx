@@ -13,11 +13,15 @@ const UserAccountWrapper: React.FC<UserAccountWrapperProps> = ({ children }) => 
   const { data: studentsData, refetch: refetchStudents } = useStudents();
 
   useEffect(() => {
-    // Show modal if no user is found and we're not loading
+    // For demo purposes, automatically set a demo user
     if (!isLoading && !currentUser) {
-      setShowModal(true);
+      setCurrentUser({
+        id: 'demo-user-1',
+        name: 'Demo User',
+        email: 'demo@tutorhub.com'
+      });
     }
-  }, [currentUser, isLoading]);
+  }, [currentUser, isLoading, setCurrentUser]);
 
   const handleUserCreated = async (userId: string) => {
     // Refetch students to get the newly created user
