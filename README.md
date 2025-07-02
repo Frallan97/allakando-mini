@@ -27,174 +27,119 @@ allakando-mini/
 ## Quick Start
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- PostgreSQL (v12 or higher)
-- npm or yarn
+- Node.js (v18+) or Bun (v1.0+)
+- PostgreSQL (v12+)
+- npm or bun
 
-### 1. Backend Setup
+### Backend Setup
 
 ```bash
-# Navigate to backend directory
 cd backend
+npm install  # or: bun install
 
-# Install dependencies
-npm install
-
-# Set up environment variables
 cp env.example .env
 # Edit .env with your database credentials
 
-# Create PostgreSQL database
 createdb allakando_db
-
-# Start the server
-npm start
+npm start    # or: bun start
 ```
 
-The backend will run on `http://localhost:3000` and automatically apply database migrations.
+Backend runs on `http://localhost:3000` with automatic migrations.
 
-### 2. Frontend Setup
+### Frontend Setup
 
 ```bash
-# Navigate to frontend directory
 cd frontend
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
+npm install  # or: bun install
+npm run dev  # or: bun dev
 ```
 
-The frontend will run on `http://localhost:5173` and connect to the backend API.
+Frontend runs on `http://localhost:5173`.
 
-### 3. Using Docker (Alternative)
+### Docker Alternative
 
 ```bash
-# Start PostgreSQL with Docker
 cd backend
 docker-compose up -d postgres
 
-# Start backend (in another terminal)
-cd backend
-npm install
-npm start
+# Terminal 1: Backend
+cd backend && npm install && npm start
+# or: cd backend && bun install && bun start
 
-# Start frontend (in another terminal)
-cd frontend
-npm install
-npm run dev
+# Terminal 2: Frontend  
+cd frontend && npm install && npm run dev
+# or: cd frontend && bun install && bun dev
 ```
 
 ## Features
 
-### Backend
-- **Express.js** REST API with all required endpoints
-- **PostgreSQL** database with automatic migrations
-- **CORS** enabled for frontend integration
-- **UUID** primary keys for all entities
-- **Transaction support** for booking operations
-- **Constraint validation** (unique emails, time overlaps, etc.)
+**Backend:** Express.js REST API, PostgreSQL with migrations, CORS, UUID keys, transactions, constraints
 
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development and building
-- **React Query** for API state management
-- **React Router** for navigation
-- **Tailwind CSS** for styling
-- **shadcn/ui** components
-- **Sonner** for toast notifications
+**Frontend:** React 18 + TypeScript, Vite, React Query, React Router, Tailwind CSS, shadcn/ui, Sonner
 
 ## API Endpoints
 
-Base URL: `http://localhost:3000/v1`
+Base: `http://localhost:3000/v1`
 
-- `GET /tutors` - List all tutors
-- `POST /tutors` - Create a tutor
-- `POST /tutors/:id/availability` - Add availability slot
-- `GET /tutors/:id/availability` - List available slots
-- `POST /students` - Create a student
-- `POST /bookings` - Book a slot
-- `GET /bookings?student_id={id}` - List student bookings
+- `GET /tutors` - List tutors
+- `POST /tutors` - Create tutor
+- `POST /tutors/:id/availability` - Add availability
+- `GET /tutors/:id/availability` - List slots
+- `POST /students` - Create student
+- `POST /bookings` - Book slot
+- `GET /bookings?student_id={id}` - List bookings
 
-## Frontend Pages
+## Pages
 
-- **Home** - Overview dashboard with statistics and quick actions
-- **Tutors** - Manage tutors and their availability slots
-- **Students** - Create and manage student accounts
-- **Bookings** - Create bookings and view booking history
+- **Home** - Dashboard with stats
+- **Tutors** - Manage tutors & availability
+- **Students** - Student accounts
+- **Bookings** - Create & view bookings
 
 ## Database Schema
 
-The database includes four main tables:
+- **tutors** (id, name, email, created_at)
+- **students** (id, name, email, created_at)
+- **availability_slots** (id, tutor_id, start_time, end_time, is_booked, created_at)
+- **bookings** (id, slot_id, student_id, booked_at)
 
-1. **tutors** - Tutor information (id, name, email, created_at)
-2. **students** - Student information (id, name, email, created_at)
-3. **availability_slots** - Tutor availability slots (id, tutor_id, start_time, end_time, is_booked, created_at)
-4. **bookings** - Student bookings (id, slot_id, student_id, booked_at)
+All use UUID primary keys with proper foreign keys and constraints.
 
-All tables use UUID primary keys and include proper foreign key relationships and constraints.
+## Development
 
-## Development Workflow
+**Backend:** Auto migrations, hot reload, error handling, CORS
+**Frontend:** Hot reload, TypeScript, React Query, Tailwind
 
-### Backend Development
-- Automatic migrations run on server startup
-- Hot reload with nodemon in development
-- Comprehensive error handling
-- CORS enabled for frontend integration
-
-### Frontend Development
-- Hot reload with Vite
-- TypeScript for type safety
-- React Query for efficient API calls
-- Responsive design with Tailwind CSS
-
-### Adding New Features
-1. Create new migration files for database changes
-2. Add new routes in `backend/src/routes/`
-3. Create new pages in `frontend/src/pages/`
+**Adding Features:**
+1. Create migration files
+2. Add routes in `backend/src/routes/`
+3. Create pages in `frontend/src/pages/`
 4. Update API client in `frontend/src/lib/api.ts`
 
-## Testing the Application
+## Testing
 
-1. **Start both servers:**
-   ```bash
-   # Terminal 1 - Backend
-   cd backend && npm start
-   
-   # Terminal 2 - Frontend
-   cd frontend && npm run dev
-   ```
+```bash
+# Terminal 1: Backend
+cd backend && npm start  # or: bun start
 
-2. **Open the application:**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3000/v1
+# Terminal 2: Frontend
+cd frontend && npm run dev  # or: bun dev
+```
 
-3. **Test the workflow:**
-   - Create a tutor on the Tutors page
-   - Add availability slots for the tutor
-   - Create a student on the Students page
-   - Create a booking on the Bookings page
+Open http://localhost:5173 and test the workflow:
+1. Create tutor → Add availability → Create student → Create booking
 
-## Production Deployment
+## Production
 
-### Backend
-1. Set `NODE_ENV=production` in environment variables
-2. Use a production PostgreSQL instance
-3. Configure proper CORS settings
-4. Set up reverse proxy (nginx, etc.)
-5. Use PM2 or similar process manager
+**Backend:** Set `NODE_ENV=production`, production PostgreSQL, CORS, reverse proxy, PM2
 
-### Frontend
-1. Build the application: `npm run build`
-2. Serve static files with nginx or similar
-3. Configure environment variables for production API URL
+**Frontend:** `npm run build` (or `bun run build`), serve with nginx, configure API URL
 
 ## Next Steps
 
-- [ ] Add authentication and authorization
-- [ ] Implement real-time notifications
-- [ ] Add comprehensive testing
-- [ ] Set up CI/CD pipeline
-- [ ] Add payment integration
-- [ ] Implement video calling features 
+- [ ] Authentication & authorization
+- [ ] Real-time notifications
+- [ ] Comprehensive testing
+- [ ] CI/CD pipeline
+- [ ] Payment integration
+- [ ] Video calling 

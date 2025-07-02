@@ -1,18 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Star, Clock, BookOpen, ArrowLeft } from 'lucide-react';
+import { Search, Filter, Star, Clock, BookOpen, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTutors } from '@/lib/api';
-import Navbar from '@/components/Navbar';
+import { useTutors, api } from '@/lib/api';
+
+
+// Custom hook to get all tutors with availability for a date
+const useTutorsWithAvailability = (tutors, selectedDate) => {
+  const [availableTutors, setAvailableTutors] = useState([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+
+  // Memoize the tutors array to prevent unnecessary re-renders
+  const memoizedTutors = useMemo(() => tutors, [tutors.map(t => t.id).join(',')]);
+
+  // Memoize the checkAvailability function
+  const checkAvailability = useCallback(async () => {
+    if (!selectedDate) {
+      setAvailableTutors(memoizedTutors);
+      setIsCheckingAvailability(false);
+      return;
+    }
+
+    setIsCheckingAvailability(true);
+    
+    const available = [];
+    
+    for (const tutor of memoizedTutors) {
+      try {
+        const data = await api.getTutorAvailability(tutor.id);
+        
+        const hasAvailability = data.slots.some(slot => {
+          const slotDate = new Date(slot.start_time).toISOString().split('T')[0];
+          return slotDate === selectedDate && !slot.is_booked;
+        });
+        
+        if (hasAvailability) {
+          available.push(tutor);
+        }
+      } catch (error) {
+        console.error(`Error checking availability for tutor ${tutor.id}:`, error);
+        continue;
+      }
+    }
+    
+    setAvailableTutors(available);
+    setIsCheckingAvailability(false);
+  }, [memoizedTutors, selectedDate]);
+
+  useEffect(() => {
+    checkAvailability();
+  }, [checkAvailability]);
+
+  return { availableTutors, isCheckingAvailability };
+};
 
 const TutorsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
+  const [selectedDate, setSelectedDate] = useState('any');
 
   const { data: tutorsData, isLoading, error } = useTutors();
 
@@ -31,7 +81,33 @@ const TutorsPage = () => {
 
   const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];
 
-  const filteredTutors = tutors
+  // Generate available dates (today + 2 weeks)
+  const generateAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push({
+        value: date.toISOString().split('T')[0],
+        label: date.toLocaleDateString('en-US', { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        isToday: i === 0
+      });
+    }
+    return dates;
+  };
+
+  const availableDates = generateAvailableDates();
+
+  // Get tutors with availability for selected date
+  const { availableTutors, isCheckingAvailability } = useTutorsWithAvailability(tutors, selectedDate === 'any' ? null : selectedDate);
+
+  // Filter tutors based on search term, subject, and date availability
+  const filteredTutors = availableTutors
     .filter(tutor => 
       tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -77,7 +153,7 @@ const TutorsPage = () => {
 
         {/* Filters */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg">
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
@@ -113,6 +189,20 @@ const TutorsPage = () => {
               </SelectContent>
             </Select>
 
+            <Select value={selectedDate} onValueChange={setSelectedDate}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any date</SelectItem>
+                {availableDates.map((date) => (
+                  <SelectItem key={date.value} value={date.value}>
+                    {date.label} {date.isToday && '(Today)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Button variant="outline" className="flex items-center">
               <Filter className="h-4 w-4 mr-2" />
               More Filters
@@ -123,7 +213,22 @@ const TutorsPage = () => {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600">
-            Showing {filteredTutors.length} tutor{filteredTutors.length !== 1 ? 's' : ''}
+            {isCheckingAvailability ? (
+              <span>Checking availability...</span>
+            ) : (
+              <>
+                Showing {filteredTutors.length} tutor{filteredTutors.length !== 1 ? 's' : ''}
+                {selectedDate !== 'any' && (
+                  <span className="ml-2 text-blue-600">
+                    available on {new Date(selectedDate).toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                )}
+              </>
+            )}
           </p>
         </div>
 
@@ -132,9 +237,22 @@ const TutorsPage = () => {
           <div className="text-center py-12">
             <p className="text-gray-600">Loading tutors...</p>
           </div>
+        ) : isCheckingAvailability ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Checking tutor availability...</p>
+          </div>
         ) : filteredTutors.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">No tutors found matching your criteria</p>
+            <p className="text-gray-600">
+              {selectedDate !== 'any' 
+                ? `No tutors available on ${new Date(selectedDate).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}`
+                : 'No tutors found matching your criteria'
+              }
+            </p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
