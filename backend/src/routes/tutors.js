@@ -6,7 +6,8 @@ const pool = require('../database/config');
 router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, name, email, created_at FROM tutors ORDER BY created_at DESC'
+      `SELECT id, name, email, subjects, about, qualifications, hourly_rate, rating, experience_years, created_at 
+       FROM tutors ORDER BY created_at DESC`
     );
     
     res.json({ tutors: rows });
@@ -18,7 +19,16 @@ router.get('/', async (req, res) => {
 
 // POST /tutors - Create a tutor
 router.post('/', async (req, res) => {
-  const { name, email } = req.body;
+  const { 
+    name, 
+    email, 
+    subjects = [], 
+    about = '', 
+    qualifications = [], 
+    hourly_rate = 45.00, 
+    rating = 4.8, 
+    experience_years = 3 
+  } = req.body;
   
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' });
@@ -26,8 +36,10 @@ router.post('/', async (req, res) => {
   
   try {
     const { rows } = await pool.query(
-      'INSERT INTO tutors (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at',
-      [name, email]
+      `INSERT INTO tutors (name, email, subjects, about, qualifications, hourly_rate, rating, experience_years) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING id, name, email, subjects, about, qualifications, hourly_rate, rating, experience_years, created_at`,
+      [name, email, subjects, about, qualifications, hourly_rate, rating, experience_years]
     );
     
     res.status(201).json(rows[0]);
@@ -88,9 +100,9 @@ router.get('/:tutor_id/availability', async (req, res) => {
     }
     
     const { rows } = await pool.query(
-      `SELECT id, start_time, end_time 
+      `SELECT id, start_time, end_time, is_booked
        FROM availability_slots 
-       WHERE tutor_id = $1 AND is_booked = false AND start_time > now()
+       WHERE tutor_id = $1 AND start_time > now()
        ORDER BY start_time ASC`,
       [tutor_id]
     );

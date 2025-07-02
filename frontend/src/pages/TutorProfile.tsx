@@ -10,15 +10,16 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useTutors, useTutorAvailability, useCreateBooking } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
-import Navbar from '@/components/Navbar';
+import UserMenu from '@/components/UserMenu';
 
 const TutorProfilePage = () => {
   const { id } = useParams();
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isBooking, setIsBooking] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: tutorsData, isLoading: tutorsLoading, error: tutorsError } = useTutors();
-  const { data: availabilityData, isLoading: availabilityLoading } = useTutorAvailability(id || '');
+  const { data: availabilityData, isLoading: availabilityLoading, refetch: refetchAvailability } = useTutorAvailability(id || '');
   const createBookingMutation = useCreateBooking();
   const { currentUser } = useUser();
 
@@ -30,13 +31,13 @@ const TutorProfilePage = () => {
     id: tutor.id,
     name: tutor.name,
     email: tutor.email,
-    subjects: ['Mathematics', 'Physics'], // Default subjects since not in API
-    rating: 4.9, // Default rating since not in API
+    subjects: tutor.subjects || ['Mathematics', 'Physics'],
+    rating: tutor.rating || 4.9,
     reviews: 127, // Default reviews since not in API
-    experience: '5 years', // Default experience since not in API
-    hourlyRate: 45, // Default rate since not in API
-    description: 'Experienced math and physics tutor with a passion for helping students excel in STEM subjects. I hold a Master\'s degree in Applied Mathematics and have been teaching for over 5 years. My approach focuses on building strong fundamentals while making learning engaging and fun.',
-    achievements: [
+    experience: `${tutor.experience_years || 5} years`,
+    hourlyRate: tutor.hourly_rate || 45,
+    description: tutor.about || 'Experienced math and physics tutor with a passion for helping students excel in STEM subjects. I hold a Master\'s degree in Applied Mathematics and have been teaching for over 5 years. My approach focuses on building strong fundamentals while making learning engaging and fun.',
+    achievements: tutor.qualifications || [
       'Master\'s in Applied Mathematics',
       '5+ years teaching experience',
       '127 positive student reviews',
@@ -89,9 +90,18 @@ const TutorProfilePage = () => {
         slot_id: selectedSlot.id
       });
       
-      toast.success('Session booked successfully! You will receive a confirmation email shortly.');
+      toast.success('Session booked successfully! You will receive a confirmation email shortly.', {
+        action: {
+          label: 'View My Bookings',
+          onClick: () => window.location.href = '/student-dashboard'
+        }
+      });
       setIsBooking(false);
       setSelectedSlot(null);
+      setIsDialogOpen(false);
+      
+      // Immediately refetch availability to update the UI
+      await refetchAvailability();
     } catch (error) {
       toast.error('Failed to book session');
       setIsBooking(false);
@@ -143,7 +153,40 @@ const TutorProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <Navbar />
+      {/* Navigation */}
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <BookOpen className="h-8 w-8 text-blue-600" />
+              <span className="text-2xl font-bold text-gray-900">TutorHub</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link to="/">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Home
+                </Button>
+              </Link>
+              <Link to="/tutors">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Find Tutors
+                </Button>
+              </Link>
+              <Link to="/student-dashboard">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  My Bookings
+                </Button>
+              </Link>
+              <Link to="/admin">
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  Admin
+                </Button>
+              </Link>
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+      </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
@@ -263,7 +306,7 @@ const TutorProfilePage = () => {
                 </div>
 
                 {selectedSlot && (
-                  <Dialog>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
                         Book This Slot

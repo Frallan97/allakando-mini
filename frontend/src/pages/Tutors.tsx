@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTutors, api } from '@/lib/api';
+import Navbar from '@/components/Navbar';
 
 
 // Custom hook to get all tutors with availability for a date
@@ -71,12 +72,12 @@ const TutorsPage = () => {
     id: tutor.id,
     name: tutor.name,
     email: tutor.email,
-    subjects: ['Mathematics', 'Physics'], // Default subjects since not in API
-    rating: 4.8, // Default rating since not in API
-    experience: '3 years', // Default experience since not in API
-    hourlyRate: 45, // Default rate since not in API
+    subjects: tutor.subjects || ['Mathematics', 'Physics'],
+    rating: tutor.rating || 4.8,
+    experience: `${tutor.experience_years || 3} years`,
+    hourlyRate: tutor.hourly_rate || 45,
     availableSlots: 8, // Default slots since not in API
-    description: 'Experienced tutor with a passion for helping students excel in their studies.',
+    description: tutor.about || 'Experienced tutor with a passion for helping students excel in their studies.',
   })) || [];
 
   const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];

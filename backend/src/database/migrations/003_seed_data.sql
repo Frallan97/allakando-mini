@@ -1,7 +1,7 @@
 -- Seed data migration
 -- This migration adds sample data to populate the application
 
--- Insert sample tutors
+-- Insert sample tutors (basic fields only - new fields will be added by migration 004)
 INSERT INTO tutors (id, name, email, created_at) VALUES
 ('550e8400-e29b-41d4-a716-446655440001', 'Alice Smith', 'alice@example.com', NOW()),
 ('550e8400-e29b-41d4-a716-446655440002', 'Bob Johnson', 'bob@example.com', NOW()),

@@ -126,4 +126,50 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /bookings/recent - Get recent bookings for admin dashboard
+router.get('/recent', async (req, res) => {
+  const { limit = 10 } = req.query;
+  
+  try {
+    const { rows } = await pool.query(
+      `SELECT 
+        b.id,
+        b.booked_at,
+        t.id as tutor_id,
+        t.name as tutor_name,
+        st.id as student_id,
+        st.name as student_name,
+        s.start_time,
+        s.end_time
+       FROM bookings b
+       JOIN availability_slots s ON b.slot_id = s.id
+       JOIN tutors t ON s.tutor_id = t.id
+       JOIN students st ON b.student_id = st.id
+       ORDER BY b.booked_at DESC
+       LIMIT $1`,
+      [parseInt(limit)]
+    );
+    
+    const bookings = rows.map(row => ({
+      id: row.id,
+      student: {
+        id: row.student_id,
+        name: row.student_name
+      },
+      tutor: {
+        id: row.tutor_id,
+        name: row.tutor_name
+      },
+      start_time: row.start_time,
+      end_time: row.end_time,
+      booked_at: row.booked_at
+    }));
+    
+    res.json({ bookings });
+  } catch (error) {
+    console.error('Error fetching recent bookings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router; 

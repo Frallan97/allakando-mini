@@ -10,17 +10,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { useTutors, useCreateTutor, useAddAvailability } from '@/lib/api';
-import Navbar from '@/components/Navbar';
+import { useTutors, useCreateTutor, useAddAvailability, useRecentBookings } from '@/lib/api';
+import UserMenu from '@/components/UserMenu';
 
 const AdminPage = () => {
   const [newTutorName, setNewTutorName] = useState('');
   const [newTutorEmail, setNewTutorEmail] = useState('');
+  const [newTutorSubjects, setNewTutorSubjects] = useState('');
+  const [newTutorAbout, setNewTutorAbout] = useState('');
+  const [newTutorQualifications, setNewTutorQualifications] = useState('');
+  const [newTutorHourlyRate, setNewTutorHourlyRate] = useState('45');
+  const [newTutorRating, setNewTutorRating] = useState('4.8');
+  const [newTutorExperience, setNewTutorExperience] = useState('3');
   const [selectedTutor, setSelectedTutor] = useState('');
   const [availabilityDate, setAvailabilityDate] = useState('');
   const [availabilityTime, setAvailabilityTime] = useState('');
 
   const { data: tutorsData, isLoading, error } = useTutors();
+  const { data: recentBookingsData, isLoading: recentBookingsLoading } = useRecentBookings(5);
   const createTutorMutation = useCreateTutor();
   const addAvailabilityMutation = useAddAvailability();
 
@@ -29,42 +36,24 @@ const AdminPage = () => {
     id: tutor.id,
     name: tutor.name,
     email: tutor.email,
-    subjects: ['Mathematics', 'Physics'], // Default subjects since not in API
+    subjects: tutor.subjects || ['Mathematics', 'Physics'],
     totalSessions: 25, // Default sessions since not in API
     availableSlots: 8, // Default slots since not in API
-    rating: 4.8 // Default rating since not in API
+    rating: tutor.rating || 4.8,
+    hourlyRate: tutor.hourly_rate || 45,
+    experience: `${tutor.experience_years || 3} years`
   })) || [];
 
-  // Mock recent bookings since not in API
-  const recentBookings = [
-    {
-      id: '1',
-      student: 'John Doe',
-      tutor: 'Alice Smith',
-      subject: 'Mathematics',
-      date: '2025-07-05',
-      time: '14:00',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      student: 'Jane Smith',
-      tutor: 'Bob Johnson',
-      subject: 'English',
-      date: '2025-07-06',
-      time: '10:00',
-      status: 'confirmed'
-    },
-    {
-      id: '3',
-      student: 'Mike Wilson',
-      tutor: 'Carol Davis',
-      subject: 'Chemistry',
-      date: '2025-07-07',
-      time: '16:00',
-      status: 'completed'
-    }
-  ];
+  // Transform recent bookings data
+  const recentBookings = recentBookingsData?.bookings.map(booking => ({
+    id: booking.id,
+    student: booking.student.name,
+    tutor: booking.tutor.name,
+    subject: 'General', // Default subject since not in API
+    date: new Date(booking.start_time).toISOString().split('T')[0],
+    time: new Date(booking.start_time).toTimeString().slice(0, 5),
+    status: 'confirmed' // Default status since not in API
+  })) || [];
 
   const stats = [
     { icon: Users, label: 'Total Tutors', value: tutors.length },
@@ -82,10 +71,25 @@ const AdminPage = () => {
     try {
       await createTutorMutation.mutateAsync({
         name: newTutorName,
-        email: newTutorEmail
+        email: newTutorEmail,
+        subjects: newTutorSubjects ? newTutorSubjects.split(',').map(s => s.trim()) : [],
+        about: newTutorAbout,
+        qualifications: newTutorQualifications ? newTutorQualifications.split(',').map(q => q.trim()) : [],
+        hourly_rate: parseFloat(newTutorHourlyRate) || 45,
+        rating: parseFloat(newTutorRating) || 4.8,
+        experience_years: parseInt(newTutorExperience) || 3
       });
+      
+      // Reset form
       setNewTutorName('');
       setNewTutorEmail('');
+      setNewTutorSubjects('');
+      setNewTutorAbout('');
+      setNewTutorQualifications('');
+      setNewTutorHourlyRate('45');
+      setNewTutorRating('4.8');
+      setNewTutorExperience('3');
+      
       toast.success('Tutor created successfully!');
     } catch (error) {
       toast.error('Failed to create tutor');
@@ -153,7 +157,40 @@ const AdminPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <Navbar variant="admin" />
+      {/* Navigation */}
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-8 w-8 text-blue-600" />
+              <span className="text-2xl font-bold text-gray-900">Admin Panel</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link to="/">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Home
+                </Button>
+              </Link>
+              <Link to="/tutors">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Find Tutors
+                </Button>
+              </Link>
+              <Link to="/student-dashboard">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  My Bookings
+                </Button>
+              </Link>
+              <Link to="/admin">
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  Admin
+                </Button>
+              </Link>
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+      </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -202,30 +239,100 @@ const AdminPage = () => {
                         Add Tutor
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>Add New Tutor</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="name">Name *</Label>
+                            <Input
+                              id="name"
+                              value={newTutorName}
+                              onChange={(e) => setNewTutorName(e.target.value)}
+                              placeholder="Enter tutor name"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="email">Email *</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={newTutorEmail}
+                              onChange={(e) => setNewTutorEmail(e.target.value)}
+                              placeholder="Enter tutor email"
+                            />
+                          </div>
+                        </div>
+                        
                         <div>
-                          <Label htmlFor="name">Name</Label>
+                          <Label htmlFor="subjects">Subjects (comma-separated)</Label>
                           <Input
-                            id="name"
-                            value={newTutorName}
-                            onChange={(e) => setNewTutorName(e.target.value)}
-                            placeholder="Enter tutor name"
+                            id="subjects"
+                            value={newTutorSubjects}
+                            onChange={(e) => setNewTutorSubjects(e.target.value)}
+                            placeholder="e.g., Mathematics, Physics, Chemistry"
                           />
                         </div>
+                        
                         <div>
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={newTutorEmail}
-                            onChange={(e) => setNewTutorEmail(e.target.value)}
-                            placeholder="Enter tutor email"
+                          <Label htmlFor="about">About</Label>
+                          <Textarea
+                            id="about"
+                            value={newTutorAbout}
+                            onChange={(e) => setNewTutorAbout(e.target.value)}
+                            placeholder="Tell us about the tutor's background, teaching style, and expertise..."
+                            rows={3}
                           />
                         </div>
+                        
+                        <div>
+                          <Label htmlFor="qualifications">Qualifications (comma-separated)</Label>
+                          <Input
+                            id="qualifications"
+                            value={newTutorQualifications}
+                            onChange={(e) => setNewTutorQualifications(e.target.value)}
+                            placeholder="e.g., Master's Degree, 5 years experience, Teaching certification"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
+                            <Input
+                              id="hourlyRate"
+                              type="number"
+                              value={newTutorHourlyRate}
+                              onChange={(e) => setNewTutorHourlyRate(e.target.value)}
+                              placeholder="45"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rating">Rating</Label>
+                            <Input
+                              id="rating"
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="5"
+                              value={newTutorRating}
+                              onChange={(e) => setNewTutorRating(e.target.value)}
+                              placeholder="4.8"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="experience">Experience (years)</Label>
+                            <Input
+                              id="experience"
+                              type="number"
+                              value={newTutorExperience}
+                              onChange={(e) => setNewTutorExperience(e.target.value)}
+                              placeholder="3"
+                            />
+                          </div>
+                        </div>
+                        
                         <Button 
                           onClick={handleCreateTutor}
                           disabled={createTutorMutation.isPending}
@@ -267,6 +374,7 @@ const AdminPage = () => {
                               <span className="text-sm text-gray-500">{tutor.totalSessions} sessions</span>
                               <span className="text-sm text-gray-500">{tutor.availableSlots} slots</span>
                               <span className="text-sm text-gray-500">★ {tutor.rating}</span>
+                              <span className="text-sm text-gray-500">${tutor.hourlyRate}/hr</span>
                             </div>
                           </div>
                         </div>
@@ -350,20 +458,31 @@ const AdminPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentBookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{booking.student}</h4>
-                        <p className="text-sm text-gray-600">{booking.tutor} • {booking.subject}</p>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(booking.date)} at {booking.time}
-                        </p>
+                {recentBookingsLoading ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-600">Loading recent bookings...</p>
+                  </div>
+                ) : recentBookings.length === 0 ? (
+                  <div className="text-center py-4">
+                    <BookOpen className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">No recent bookings</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentBookings.map((booking) => (
+                      <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{booking.student}</h4>
+                          <p className="text-sm text-gray-600">{booking.tutor} • {booking.subject}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(booking.date)} at {booking.time}
+                          </p>
+                        </div>
+                        {getStatusBadge(booking.status)}
                       </div>
-                      {getStatusBadge(booking.status)}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

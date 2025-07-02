@@ -8,6 +8,12 @@ export interface Tutor {
   id: string;
   name: string;
   email: string;
+  subjects: string[];
+  about: string;
+  qualifications: string[];
+  hourly_rate: number;
+  rating: number;
+  experience_years: number;
   created_at: string;
 }
 
@@ -57,7 +63,16 @@ const api = {
     return response.json();
   },
 
-  async createTutor(data: { name: string; email: string }): Promise<Tutor> {
+  async createTutor(data: { 
+    name: string; 
+    email: string; 
+    subjects?: string[]; 
+    about?: string; 
+    qualifications?: string[]; 
+    hourly_rate?: number; 
+    rating?: number; 
+    experience_years?: number; 
+  }): Promise<Tutor> {
     const response = await fetch(`${API_BASE_URL}/tutors`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -114,6 +129,12 @@ const api = {
   async getStudentBookings(studentId: string): Promise<{ bookings: BookingWithDetails[] }> {
     const response = await fetch(`${API_BASE_URL}/bookings?student_id=${studentId}`);
     if (!response.ok) throw new Error('Failed to fetch student bookings');
+    return response.json();
+  },
+
+  async getRecentBookings(limit: number = 10): Promise<{ bookings: BookingWithDetails[] }> {
+    const response = await fetch(`${API_BASE_URL}/bookings/recent?limit=${limit}`);
+    if (!response.ok) throw new Error('Failed to fetch recent bookings');
     return response.json();
   },
 };
@@ -183,6 +204,13 @@ export const useStudentBookings = (studentId: string) => {
     queryKey: ['student-bookings', studentId],
     queryFn: () => api.getStudentBookings(studentId),
     enabled: !!studentId,
+  });
+};
+
+export const useRecentBookings = (limit: number = 10) => {
+  return useQuery({
+    queryKey: ['recent-bookings', limit],
+    queryFn: () => api.getRecentBookings(limit),
   });
 };
 

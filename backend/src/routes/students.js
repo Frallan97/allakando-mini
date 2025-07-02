@@ -2,6 +2,20 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../database/config');
 
+// GET /students - List all students
+router.get('/', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name, email, created_at FROM students ORDER BY created_at DESC'
+    );
+    
+    res.json({ students: rows });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /students - Create a student
 router.post('/', async (req, res) => {
   const { name, email } = req.body;
