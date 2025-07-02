@@ -1,0 +1,266 @@
+
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, Star, Clock, BookOpen, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const TutorsPage = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('rating');
+
+  // Mock data - will be replaced with API calls
+  const tutors = [
+    {
+      id: '1',
+      name: 'Alice Smith',
+      email: 'alice@example.com',
+      subjects: ['Mathematics', 'Physics'],
+      rating: 4.9,
+      experience: '5 years',
+      hourlyRate: 45,
+      availableSlots: 12,
+      description: 'Experienced math and physics tutor with a passion for helping students excel in STEM subjects.',
+    },
+    {
+      id: '2',
+      name: 'Bob Johnson',
+      email: 'bob@example.com',
+      subjects: ['English', 'Literature'],
+      rating: 4.8,
+      experience: '3 years',
+      hourlyRate: 35,
+      availableSlots: 8,
+      description: 'English literature specialist focused on creative writing and critical analysis.',
+    },
+    {
+      id: '3',
+      name: 'Carol Davis',
+      email: 'carol@example.com',
+      subjects: ['Chemistry', 'Biology'],
+      rating: 4.7,
+      experience: '7 years',
+      hourlyRate: 50,
+      availableSlots: 15,
+      description: 'Science tutor with extensive lab experience and research background.',
+    },
+    {
+      id: '4',
+      name: 'David Wilson',
+      email: 'david@example.com',
+      subjects: ['Computer Science', 'Programming'],
+      rating: 4.9,
+      experience: '4 years',
+      hourlyRate: 60,
+      availableSlots: 6,
+      description: 'Software engineer turned tutor, specializing in Python, JavaScript, and algorithms.',
+    },
+    {
+      id: '5',
+      name: 'Emma Brown',
+      email: 'emma@example.com',
+      subjects: ['Spanish', 'French'],
+      rating: 4.6,
+      experience: '6 years',
+      hourlyRate: 40,
+      availableSlots: 10,
+      description: 'Native bilingual speaker offering immersive language learning experiences.',
+    },
+    {
+      id: '6',
+      name: 'Frank Miller',
+      email: 'frank@example.com',
+      subjects: ['History', 'Social Studies'],
+      rating: 4.8,
+      experience: '8 years',
+      hourlyRate: 38,
+      availableSlots: 14,
+      description: 'History professor with expertise in world history and political science.',
+    }
+  ];
+
+  const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];
+
+  const filteredTutors = tutors
+    .filter(tutor => 
+      tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .filter(tutor => 
+      subjectFilter === 'all' || tutor.subjects.includes(subjectFilter)
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'rating':
+          return b.rating - a.rating;
+        case 'price':
+          return a.hourlyRate - b.hourlyRate;
+        case 'availability':
+          return b.availableSlots - a.availableSlots;
+        default:
+          return 0;
+      }
+    });
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Navigation */}
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Link to="/">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
+              <div className="flex items-center space-x-2">
+                <BookOpen className="h-8 w-8 text-blue-600" />
+                <span className="text-2xl font-bold text-gray-900">TutorHub</span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link to="/student-dashboard">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  My Bookings
+                </Button>
+              </Link>
+              <Link to="/admin">
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  Admin
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Find Your Tutor</h1>
+          <p className="text-xl text-gray-600">Browse our community of expert tutors and book your perfect learning session</p>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg">
+          <div className="grid md:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search tutors or subjects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                {subjects.map((subject) => (
+                  <SelectItem key={subject} value={subject}>
+                    {subject === 'all' ? 'All Subjects' : subject}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rating">Highest Rated</SelectItem>
+                <SelectItem value="price">Lowest Price</SelectItem>
+                <SelectItem value="availability">Most Available</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" className="flex items-center">
+              <Filter className="h-4 w-4 mr-2" />
+              More Filters
+            </Button>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Showing {filteredTutors.length} tutor{filteredTutors.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        {/* Tutors Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTutors.map((tutor) => (
+            <Card key={tutor.id} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center space-x-4 mb-3">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl font-bold text-blue-600">
+                      {tutor.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-gray-900">{tutor.name}</CardTitle>
+                    <div className="flex items-center mt-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="text-sm text-gray-600 ml-1">{tutor.rating}</span>
+                      <span className="text-sm text-gray-400 ml-2">{tutor.experience}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 line-clamp-2">{tutor.description}</p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {tutor.subjects.map((subject) => (
+                    <Badge key={subject} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                      {subject}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center text-gray-600">
+                    <Clock className="h-4 w-4 mr-1" />
+                    <span className="text-sm">{tutor.availableSlots} slots available</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-gray-900">${tutor.hourlyRate}</div>
+                    <div className="text-sm text-gray-500">per hour</div>
+                  </div>
+                </div>
+                <Link to={`/tutor/${tutor.id}`}>
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
+                    View Profile & Book
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredTutors.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <Search className="h-16 w-16 mx-auto" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No tutors found</h3>
+            <p className="text-gray-600">Try adjusting your search criteria or filters</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TutorsPage;
