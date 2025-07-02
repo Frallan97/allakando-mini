@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useTutors, useTutorAvailability, useCreateBooking } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
-import UserMenu from '@/components/UserMenu';
+import Navbar from '@/components/Navbar';
 
 const TutorProfilePage = () => {
   const { id } = useParams();
@@ -143,40 +143,7 @@ const TutorProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">TutorHub</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
-                  Home
-                </Button>
-              </Link>
-              <Link to="/tutors">
-                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
-                  Find Tutors
-                </Button>
-              </Link>
-              <Link to="/student-dashboard">
-                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
-                  My Bookings
-                </Button>
-              </Link>
-              <Link to="/admin">
-                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                  Admin
-                </Button>
-              </Link>
-              <UserMenu />
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
