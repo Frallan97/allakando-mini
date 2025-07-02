@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { User, Mail, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateStudent } from '@/lib/api';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { ValidationError } from '@/lib/errors';
 
 interface UserAccountModalProps {
   isOpen: boolean;
@@ -19,17 +21,38 @@ const UserAccountModal: React.FC<UserAccountModalProps> = ({ isOpen, onClose, on
   const [isCreating, setIsCreating] = useState(false);
   
   const createStudentMutation = useCreateStudent();
+  const { handleError } = useErrorHandler({ 
+    context: 'UserAccountModal',
+    showToast: true 
+  });
+
+  const validateForm = (): ValidationError | null => {
+    if (!name.trim()) {
+      return new ValidationError('Please enter your full name', 'name');
+    }
+    
+    if (!email.trim()) {
+      return new ValidationError('Please enter your email address', 'email');
+    }
+    
+    if (!email.includes('@') || !email.includes('.')) {
+      return new ValidationError('Please enter a valid email address', 'email', email);
+    }
+    
+    if (name.trim().length < 2) {
+      return new ValidationError('Name must be at least 2 characters long', 'name', name);
+    }
+    
+    return null;
+  };
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !email.trim()) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    if (!email.includes('@')) {
-      toast.error('Please enter a valid email address');
+    // Validate form
+    const validationError = validateForm();
+    if (validationError) {
+      handleError(validationError);
       return;
     }
 
@@ -41,13 +64,14 @@ const UserAccountModal: React.FC<UserAccountModalProps> = ({ isOpen, onClose, on
         email: email.trim()
       });
       
-      toast.success('Account created successfully!');
+      toast.success('Account created successfully! Welcome to TutorHub!');
       onUserCreated(student.id);
       setIsCreating(false);
       setName('');
       setEmail('');
+      onClose();
     } catch (error) {
-      toast.error('Failed to create account. Please try again.');
+      handleError(error, 'Failed to create account');
       setIsCreating(false);
     }
   };
@@ -90,6 +114,7 @@ const UserAccountModal: React.FC<UserAccountModalProps> = ({ isOpen, onClose, on
                 required
                 disabled={isCreating}
                 className="h-12 text-base"
+                minLength={2}
               />
             </div>
             

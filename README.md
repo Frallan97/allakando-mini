@@ -68,6 +68,8 @@ Frontend runs on `http://localhost:8080`.
 
 **Frontend:** React 18 + TypeScript, Vite, React Query, React Router, Tailwind CSS, shadcn/ui, Sonner
 
+**Error Handling:** Comprehensive error handling with custom error types, user-friendly messages, retry logic, and error boundaries
+
 ## API Endpoints
 
 Base: `http://localhost:3000/v1`
@@ -149,3 +151,37 @@ Open http://localhost:5173 and test the workflow:
 - [ ] CI/CD pipeline
 - [ ] Payment integration
 - [ ] Video calling 
+
+## Error Handling
+
+The frontend includes a robust error handling system:
+
+### Error Types
+- **APIError**: For HTTP errors with status codes and details
+- **NetworkError**: For connection failures
+- **ValidationError**: For form validation errors
+
+### Error Handling Hooks
+- **useErrorHandler**: For handling errors with toast notifications
+- **useAsyncErrorHandler**: For wrapping async operations with error handling
+
+### Components
+- **ErrorBoundary**: Catches React errors and displays user-friendly messages
+- **LoadingErrorState**: Reusable component for loading and error states
+
+### Usage Example
+```tsx
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+
+const MyComponent = () => {
+  const { handleError } = useErrorHandler({ context: 'MyComponent' });
+  
+  const handleSubmit = async () => {
+    try {
+      await api.createSomething(data);
+    } catch (error) {
+      handleError(error, 'Failed to create item');
+    }
+  };
+};
+``` 

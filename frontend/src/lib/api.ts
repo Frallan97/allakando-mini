@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { APIError, NetworkError, getErrorMessage, formatErrorForLogging } from './errors';
 
 // API base URL
 const API_BASE_URL = 'http://localhost:3000/v1';
@@ -54,13 +55,53 @@ export interface BookingWithDetails {
   booked_at: string;
 }
 
+// Helper function to handle API responses
+async function handleApiResponse<T>(response: Response, context: string): Promise<T> {
+  if (!response.ok) {
+    let errorData: any = {};
+    
+    try {
+      errorData = await response.json();
+    } catch {
+      // If we can't parse the error response, use default error
+    }
+    
+    const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+    const error = new APIError(errorMessage, response.status, errorData.code, errorData);
+    
+    console.error(formatErrorForLogging(error, context));
+    throw error;
+  }
+  
+  return response.json();
+}
+
+// Helper function to handle fetch errors
+function handleFetchError(error: unknown, context: string): never {
+  if (error instanceof APIError) {
+    throw error; // Re-throw API errors as they're already handled
+  }
+  
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    const networkError = new NetworkError();
+    console.error(formatErrorForLogging(networkError, context));
+    throw networkError;
+  }
+  
+  console.error(formatErrorForLogging(error, context));
+  throw error;
+}
+
 // API functions
 const api = {
   // Tutors
   async getTutors(): Promise<{ tutors: Tutor[] }> {
-    const response = await fetch(`${API_BASE_URL}/tutors`);
-    if (!response.ok) throw new Error('Failed to fetch tutors');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/tutors`);
+      return handleApiResponse(response, 'getTutors');
+    } catch (error) {
+      handleFetchError(error, 'getTutors');
+    }
   },
 
   async createTutor(data: { 
@@ -73,69 +114,93 @@ const api = {
     rating?: number; 
     experience_years?: number; 
   }): Promise<Tutor> {
-    const response = await fetch(`${API_BASE_URL}/tutors`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to create tutor');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/tutors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return handleApiResponse(response, 'createTutor');
+    } catch (error) {
+      handleFetchError(error, 'createTutor');
+    }
   },
 
   async addAvailability(tutorId: string, data: { start_time: string; end_time: string }): Promise<AvailabilitySlot> {
-    const response = await fetch(`${API_BASE_URL}/tutors/${tutorId}/availability`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to add availability');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/tutors/${tutorId}/availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return handleApiResponse(response, 'addAvailability');
+    } catch (error) {
+      handleFetchError(error, 'addAvailability');
+    }
   },
 
   async getTutorAvailability(tutorId: string): Promise<{ slots: AvailabilitySlot[] }> {
-    const response = await fetch(`${API_BASE_URL}/tutors/${tutorId}/availability`);
-    if (!response.ok) throw new Error('Failed to fetch tutor availability');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/tutors/${tutorId}/availability`);
+      return handleApiResponse(response, 'getTutorAvailability');
+    } catch (error) {
+      handleFetchError(error, 'getTutorAvailability');
+    }
   },
 
   // Students
   async createStudent(data: { name: string; email: string }): Promise<Student> {
-    const response = await fetch(`${API_BASE_URL}/students`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to create student');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return handleApiResponse(response, 'createStudent');
+    } catch (error) {
+      handleFetchError(error, 'createStudent');
+    }
   },
 
   async getStudents(): Promise<{ students: Student[] }> {
-    const response = await fetch(`${API_BASE_URL}/students`);
-    if (!response.ok) throw new Error('Failed to fetch students');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/students`);
+      return handleApiResponse(response, 'getStudents');
+    } catch (error) {
+      handleFetchError(error, 'getStudents');
+    }
   },
 
   // Bookings
   async createBooking(data: { student_id: string; slot_id: string }): Promise<{ booking: Booking }> {
-    const response = await fetch(`${API_BASE_URL}/bookings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to create booking');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return handleApiResponse(response, 'createBooking');
+    } catch (error) {
+      handleFetchError(error, 'createBooking');
+    }
   },
 
   async getStudentBookings(studentId: string): Promise<{ bookings: BookingWithDetails[] }> {
-    const response = await fetch(`${API_BASE_URL}/bookings?student_id=${studentId}`);
-    if (!response.ok) throw new Error('Failed to fetch student bookings');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings?student_id=${studentId}`);
+      return handleApiResponse(response, 'getStudentBookings');
+    } catch (error) {
+      handleFetchError(error, 'getStudentBookings');
+    }
   },
 
   async getRecentBookings(limit: number = 10): Promise<{ bookings: BookingWithDetails[] }> {
-    const response = await fetch(`${API_BASE_URL}/bookings/recent?limit=${limit}`);
-    if (!response.ok) throw new Error('Failed to fetch recent bookings');
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings/recent?limit=${limit}`);
+      return handleApiResponse(response, 'getRecentBookings');
+    } catch (error) {
+      handleFetchError(error, 'getRecentBookings');
+    }
   },
 };
 

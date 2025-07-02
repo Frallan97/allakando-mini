@@ -1,4 +1,5 @@
 import { api } from '../api';
+import { APIError, NetworkError } from '../errors';
 
 // Mock fetch globally
 (global as any).fetch = jest.fn();
@@ -35,10 +36,24 @@ describe('API Client', () => {
       expect(fetch).toHaveBeenCalledWith('http://localhost:3000/v1/tutors');
     });
 
-    it('should throw error when fetch fails', async () => {
-      (fetch as jest.MockedFunction<typeof fetch>).mockRejectedValueOnce(new Error('Network error'));
+    it('should throw APIError when server returns error', async () => {
+      (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Internal server error' })
+      } as Response);
 
-      await expect(api.getTutors()).rejects.toThrow('Network error');
+      await expect(api.getTutors()).rejects.toThrow(APIError);
+      await expect(api.getTutors()).rejects.toMatchObject({
+        status: 500,
+        message: 'Internal server error'
+      });
+    });
+
+    it('should throw NetworkError when fetch fails', async () => {
+      (fetch as jest.MockedFunction<typeof fetch>).mockRejectedValueOnce(new TypeError('fetch failed'));
+
+      await expect(api.getTutors()).rejects.toThrow(NetworkError);
     });
   });
 
@@ -79,6 +94,27 @@ describe('API Client', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tutorData)
+      });
+    });
+
+    it('should throw APIError with validation details', async () => {
+      (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ 
+          error: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          details: { field: 'email', message: 'Invalid email format' }
+        })
+      } as Response);
+
+      const tutorData = { name: 'Test', email: 'invalid-email' };
+
+      await expect(api.createTutor(tutorData)).rejects.toThrow(APIError);
+      await expect(api.createTutor(tutorData)).rejects.toMatchObject({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        details: { field: 'email', message: 'Invalid email format' }
       });
     });
   });
