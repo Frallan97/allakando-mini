@@ -22,9 +22,9 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Student not found' });
     }
     
-    // Check if slot exists and is available
+    // Check if slot exists and is available WITH ROW LOCK to prevent race conditions
     const slotCheck = await client.query(
-      'SELECT id, tutor_id, start_time, end_time, is_booked FROM availability_slots WHERE id = $1',
+      'SELECT id, tutor_id, start_time, end_time, is_booked FROM availability_slots WHERE id = $1 FOR UPDATE',
       [slot_id]
     );
     
@@ -36,7 +36,10 @@ router.post('/', async (req, res) => {
     const slot = slotCheck.rows[0];
     if (slot.is_booked) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: 'Slot is already booked' });
+      return res.status(409).json({ 
+        error: 'Slot is already booked',
+        code: 'SLOT_UNAVAILABLE'
+      });
     }
     
     // Create booking
@@ -67,7 +70,10 @@ router.post('/', async (req, res) => {
     await client.query('ROLLBACK');
     
     if (error.code === '23505') { // Unique violation (double booking)
-      return res.status(409).json({ error: 'Slot is already booked' });
+      return res.status(409).json({ 
+        error: 'Slot is already booked',
+        code: 'SLOT_UNAVAILABLE'
+      });
     }
     
     console.error('Error creating booking:', error);
