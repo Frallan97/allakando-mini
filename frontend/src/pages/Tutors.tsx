@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Filter, Star, Clock, BookOpen, Calendar } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTutors, api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
+import { TutorFilters } from '@/components/TutorFilters';
+import { TutorCard } from '@/components/TutorCard';
+import { useTutorTransforms, useAvailableDates } from '@/hooks/useTutorTransforms';
+import { useTutorFiltering } from '@/hooks/useTutorFiltering';
 
 
 // Custom hook to get all tutors with availability for a date
@@ -66,68 +65,22 @@ const TutorsPage = () => {
   const [selectedDate, setSelectedDate] = useState('any');
 
   const { data: tutorsData, isLoading, error } = useTutors();
-
-  // Transform API data to match the original structure
-  const tutors = tutorsData?.tutors.map(tutor => ({
-    id: tutor.id,
-    name: tutor.name,
-    email: tutor.email,
-    subjects: tutor.subjects || ['Mathematics', 'Physics'],
-    rating: tutor.rating || 4.8,
-    experience: `${tutor.experience_years || 3} years`,
-    hourlyRate: tutor.hourly_rate || 45,
-    availableSlots: 8, // Default slots since not in API
-    description: tutor.about || 'Experienced tutor with a passion for helping students excel in their studies.',
-  })) || [];
-
-  const subjects = ['all', 'Mathematics', 'Physics', 'English', 'Literature', 'Chemistry', 'Biology', 'Computer Science', 'Programming', 'Spanish', 'French', 'History', 'Social Studies'];
-
-  // Generate available dates (today + 2 weeks)
-  const generateAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push({
-        value: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric' 
-        }),
-        isToday: i === 0
-      });
-    }
-    return dates;
-  };
-
-  const availableDates = generateAvailableDates();
+  
+  // Transform API data using custom hook
+  const tutors = useTutorTransforms(tutorsData);
+  
+  // Get available dates using custom hook
+  const availableDates = useAvailableDates();
 
   // Get tutors with availability for selected date
   const { availableTutors, isCheckingAvailability } = useTutorsWithAvailability(tutors, selectedDate === 'any' ? null : selectedDate);
 
-  // Filter tutors based on search term, subject, and date availability
-  const filteredTutors = availableTutors
-    .filter(tutor => 
-      tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .filter(tutor => 
-      subjectFilter === 'all' || tutor.subjects.includes(subjectFilter)
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'rating':
-          return b.rating - a.rating;
-        case 'price':
-          return a.hourlyRate - b.hourlyRate;
-        case 'availability':
-          return b.availableSlots - a.availableSlots;
-        default:
-          return 0;
-      }
-    });
+  // Filter tutors using custom hook
+  const filteredTutors = useTutorFiltering(availableTutors, {
+    searchTerm,
+    subjectFilter, 
+    sortBy
+  });
 
   if (error) {
     return (
@@ -153,63 +106,17 @@ const TutorsPage = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg">
-          <div className="grid md:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search tutors or subjects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Subjects" />
-              </SelectTrigger>
-              <SelectContent>
-                {subjects.map((subject) => (
-                  <SelectItem key={subject} value={subject}>
-                    {subject === 'all' ? 'All Subjects' : subject}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-                <SelectItem value="price">Lowest Price</SelectItem>
-                <SelectItem value="availability">Most Available</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedDate} onValueChange={setSelectedDate}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any date</SelectItem>
-                {availableDates.map((date) => (
-                  <SelectItem key={date.value} value={date.value}>
-                    {date.label} {date.isToday && '(Today)'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" className="flex items-center">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
-          </div>
-        </div>
+        <TutorFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          subjectFilter={subjectFilter}
+          setSubjectFilter={setSubjectFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          availableDates={availableDates}
+        />
 
         {/* Results Count */}
         <div className="mb-6">
@@ -258,53 +165,7 @@ const TutorsPage = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTutors.map((tutor) => (
-              <Card key={tutor.id} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                      <span className="text-2xl font-bold text-blue-600">
-                        {tutor.name.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl text-gray-900">{tutor.name}</CardTitle>
-                      <div className="flex items-center mt-1">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        <span className="text-sm text-gray-600 ml-1">{tutor.rating}</span>
-                        <span className="text-sm text-gray-400 ml-2">{tutor.experience}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-gray-600 mb-4 line-clamp-2">{tutor.description}</p>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {tutor.subjects.map((subject) => (
-                      <Badge key={subject} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                        {subject}
-                      </Badge>
-                    ))}
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center text-gray-600">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span className="text-sm">{tutor.availableSlots} slots available</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">${tutor.hourlyRate}</div>
-                      <div className="text-sm text-gray-500">per hour</div>
-                    </div>
-                  </div>
-                  
-                  <Link to={`/tutor/${tutor.id}`}>
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
-                      View Profile & Book
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              <TutorCard key={tutor.id} tutor={tutor} />
             ))}
           </div>
         )}
