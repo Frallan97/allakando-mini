@@ -11,6 +11,7 @@ allakando-mini/
 │   │   ├── database/  # Database config and migrations
 │   │   ├── routes/    # API route handlers
 │   │   └── server.js  # Main server file
+│   ├── tests
 │   ├── package.json
 │   ├── docker-compose.yml
 │   └── README.md
@@ -18,6 +19,7 @@ allakando-mini/
 │   ├── src/
 │   │   ├── pages/     # Page components
 │   │   ├── lib/       # API client and utilities
+│   │   ├── test/       # Tests
 │   │   └── components/# UI components
 │   ├── package.json
 │   └── README.md
@@ -31,7 +33,7 @@ allakando-mini/
 - PostgreSQL (v12+)
 - npm or bun
 
-### Backend Setup
+### Backend And Database Setup
 
 ```bash
 cd backend
@@ -40,7 +42,10 @@ npm install  # or: bun install
 cp env.example .env
 # Edit .env with your database credentials
 
-createdb allakando_db
+# Set up the postgres db
+docker compose up -d --build
+
+# Start the backend
 npm start    # or: bun start
 ```
 
@@ -54,22 +59,8 @@ npm install  # or: bun install
 npm run dev  # or: bun dev
 ```
 
-Frontend runs on `http://localhost:5173`.
+Frontend runs on `http://localhost:8080`.
 
-### Docker Alternative
-
-```bash
-cd backend
-docker-compose up -d postgres
-
-# Terminal 1: Backend
-cd backend && npm install && npm start
-# or: cd backend && bun install && bun start
-
-# Terminal 2: Frontend  
-cd frontend && npm install && npm run dev
-# or: cd frontend && bun install && bun dev
-```
 
 ## Features
 
@@ -149,17 +140,12 @@ cd frontend && npm test
 Open http://localhost:5173 and test the workflow:
 1. Create tutor → Add availability → Create student → Create booking
 
-## Production
-
-**Backend:** Set `NODE_ENV=production`, production PostgreSQL, CORS, reverse proxy, PM2
-
-**Frontend:** `npm run build` (or `bun run build`), serve with nginx, configure API URL
 
 ## Next Steps
 
 - [ ] Authentication & authorization
 - [ ] Real-time notifications
-- [ ] Comprehensive testing
+- [X] Comprehensive testing
 - [ ] CI/CD pipeline
 - [ ] Payment integration
 - [ ] Video calling 
