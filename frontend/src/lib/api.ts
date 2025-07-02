@@ -43,6 +43,10 @@ export interface BookingWithDetails {
     id: string;
     name: string;
   };
+  student: {
+    id: string;
+    name: string;
+  };
   start_time: string;
   end_time: string;
   booked_at: string;
@@ -116,6 +120,12 @@ const api = {
     if (!response.ok) throw new Error('Failed to fetch student bookings');
     return response.json();
   },
+
+  async getRecentBookings(): Promise<{ bookings: BookingWithDetails[] }> {
+    const response = await fetch(`${API_BASE_URL}/bookings`);
+    if (!response.ok) throw new Error('Failed to fetch recent bookings');
+    return response.json();
+  },
 };
 
 // React Query hooks
@@ -174,6 +184,7 @@ export const useCreateBooking = () => {
     mutationFn: api.createBooking,
     onSuccess: (_, { student_id }) => {
       queryClient.invalidateQueries({ queryKey: ['student-bookings', student_id] });
+      queryClient.invalidateQueries({ queryKey: ['recent-bookings'] });
     },
   });
 };
@@ -183,6 +194,14 @@ export const useStudentBookings = (studentId: string) => {
     queryKey: ['student-bookings', studentId],
     queryFn: () => api.getStudentBookings(studentId),
     enabled: !!studentId,
+  });
+};
+
+export const useRecentBookings = () => {
+  return useQuery({
+    queryKey: ['recent-bookings'],
+    queryFn: api.getRecentBookings,
+    refetchInterval: 30000, // Refetch every 30 seconds to keep data fresh
   });
 };
 

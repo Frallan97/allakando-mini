@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { useTutors, useCreateTutor, useAddAvailability } from '@/lib/api';
+import { useTutors, useCreateTutor, useAddAvailability, useRecentBookings } from '@/lib/api';
 import UserMenu from '@/components/UserMenu';
 
 const AdminPage = () => {
@@ -21,6 +21,7 @@ const AdminPage = () => {
   const [availabilityTime, setAvailabilityTime] = useState('');
 
   const { data: tutorsData, isLoading, error } = useTutors();
+  const { data: recentBookingsData, isLoading: bookingsLoading } = useRecentBookings();
   const createTutorMutation = useCreateTutor();
   const addAvailabilityMutation = useAddAvailability();
 
@@ -35,36 +36,8 @@ const AdminPage = () => {
     rating: 4.8 // Default rating since not in API
   })) || [];
 
-  // Mock recent bookings since not in API
-  const recentBookings = [
-    {
-      id: '1',
-      student: 'John Doe',
-      tutor: 'Alice Smith',
-      subject: 'Mathematics',
-      date: '2025-07-05',
-      time: '14:00',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      student: 'Jane Smith',
-      tutor: 'Bob Johnson',
-      subject: 'English',
-      date: '2025-07-06',
-      time: '10:00',
-      status: 'confirmed'
-    },
-    {
-      id: '3',
-      student: 'Mike Wilson',
-      tutor: 'Carol Davis',
-      subject: 'Chemistry',
-      date: '2025-07-07',
-      time: '16:00',
-      status: 'completed'
-    }
-  ];
+  // Get real recent bookings from API
+  const recentBookings = recentBookingsData?.bookings || [];
 
   const stats = [
     { icon: Users, label: 'Total Tutors', value: tutors.length },
@@ -118,26 +91,7 @@ const AdminPage = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>;
-      case 'completed':
-        return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   if (error) {
     return (
@@ -383,20 +337,36 @@ const AdminPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentBookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{booking.student}</h4>
-                        <p className="text-sm text-gray-600">{booking.tutor} • {booking.subject}</p>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(booking.date)} at {booking.time}
-                        </p>
+                {bookingsLoading ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-600">Loading bookings...</p>
+                  </div>
+                ) : recentBookings.length === 0 ? (
+                  <div className="text-center py-4">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">No recent bookings</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentBookings.map((booking) => (
+                      <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{booking.student.name}</h4>
+                          <p className="text-sm text-gray-600">{booking.tutor.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(booking.start_time).toLocaleDateString()} at {new Date(booking.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge className="bg-green-100 text-green-800 mb-1">Booked</Badge>
+                          <p className="text-xs text-gray-500">
+                            {new Date(booking.booked_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      {getStatusBadge(booking.status)}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
