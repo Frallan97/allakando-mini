@@ -34,6 +34,28 @@ export interface AvailabilitySlot {
   created_at: string;
 }
 
+export interface TutorDateAvailability {
+  date: string;
+  total_slots: number;
+  available_slots: number;
+  has_availability: boolean;
+  slots: AvailabilitySlot[];
+}
+
+export interface TutorAvailabilityData {
+  tutor_id: string;
+  tutor_name: string;
+  dates: Record<string, TutorDateAvailability>;
+}
+
+export interface BulkAvailabilityResponse {
+  availability: TutorAvailabilityData[];
+  query: {
+    start_date: string;
+    end_date: string;
+  };
+}
+
 export interface Booking {
   id: string;
   slot_id: string;
@@ -148,6 +170,24 @@ const api = {
     }
   },
 
+  // Bulk availability for all tutors
+  async getBulkAvailability(startDate: string, endDate?: string): Promise<BulkAvailabilityResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (endDate) {
+        params.append('start_date', startDate);
+        params.append('end_date', endDate);
+      } else {
+        params.append('date', startDate);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/availability?${params}`);
+      return handleApiResponse(response, 'getBulkAvailability');
+    } catch (error) {
+      handleFetchError(error, 'getBulkAvailability');
+    }
+  },
+
   // Students
   async createStudent(data: { name: string; email: string }): Promise<Student> {
     try {
@@ -238,6 +278,15 @@ export const useTutorAvailability = (tutorId: string) => {
     queryKey: ['tutor-availability', tutorId],
     queryFn: () => api.getTutorAvailability(tutorId),
     enabled: !!tutorId,
+  });
+};
+
+export const useBulkAvailability = (startDate: string, endDate?: string) => {
+  return useQuery({
+    queryKey: ['bulk-availability', startDate, endDate],
+    queryFn: () => api.getBulkAvailability(startDate, endDate),
+    enabled: !!startDate,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

@@ -6,6 +6,7 @@ const runMigrations = require('./database/migrate');
 const tutorsRouter = require('./routes/tutors');
 const studentsRouter = require('./routes/students');
 const bookingsRouter = require('./routes/bookings');
+const availabilityRouter = require('./routes/availability');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.get('/health', (req, res) => {
 app.use('/v1/tutors', tutorsRouter);
 app.use('/v1/students', studentsRouter);
 app.use('/v1/bookings', bookingsRouter);
+app.use('/v1/availability', availabilityRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
