@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { toast } from 'sonner';
 import { useTutors, useTutorAvailability, useCreateBooking } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
@@ -16,6 +17,7 @@ const TutorProfilePage = () => {
   const { id } = useParams();
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isBooking, setIsBooking] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const { data: tutorsData, isLoading: tutorsLoading, error: tutorsError } = useTutors();
   const { data: availabilityData, isLoading: availabilityLoading } = useTutorAvailability(id || '');
@@ -68,6 +70,32 @@ const TutorProfilePage = () => {
       minute: '2-digit',
       hour12: true
     });
+  };
+
+  // Get unique dates that have available slots
+  const getAvailableDates = () => {
+    if (!tutorProfile?.availableSlots) return [];
+    return tutorProfile.availableSlots.map(slot => new Date(slot.date));
+  };
+
+  // Get slots for a specific date
+  const getSlotsForDate = (date: Date) => {
+    if (!tutorProfile?.availableSlots) return [];
+    const dateString = date.toISOString().split('T')[0];
+    return tutorProfile.availableSlots.filter(slot => slot.date === dateString);
+  };
+
+  // Custom day modifier for calendar to highlight available dates
+  const modifiers = {
+    available: getAvailableDates(),
+  };
+
+  const modifiersStyles = {
+    available: { 
+      backgroundColor: '#dbeafe', 
+      color: '#1d4ed8',
+      fontWeight: 'bold'
+    },
   };
 
   const handleBooking = async () => {
@@ -181,7 +209,7 @@ const TutorProfilePage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Tutor Profile */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-6">
                 <div className="flex items-center space-x-6">
@@ -243,6 +271,90 @@ const TutorProfilePage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Calendar Section */}
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-2xl text-gray-900 flex items-center">
+                  <Calendar className="h-6 w-6 mr-2 text-blue-600" />
+                  Available Dates
+                </CardTitle>
+                <p className="text-gray-600">Select a date to view available time slots</p>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Calendar */}
+                  <div className="flex-1">
+                    {availabilityLoading ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">Loading availability...</p>
+                      </div>
+                    ) : (
+                      <CalendarComponent
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        modifiers={modifiers}
+                        modifiersStyles={modifiersStyles}
+                        className="rounded-md border shadow-sm"
+                        disabled={(date) => {
+                          // Disable dates in the past and dates without available slots
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          if (date < today) return true;
+                          
+                          const dateString = date.toISOString().split('T')[0];
+                          return !tutorProfile.availableSlots.some(slot => slot.date === dateString);
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Time Slots for Selected Date */}
+                  <div className="flex-1">
+                    {selectedDate ? (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">
+                          Available Times for {formatDate(selectedDate.toISOString().split('T')[0])}
+                        </h4>
+                        {(() => {
+                          const slotsForDate = getSlotsForDate(selectedDate);
+                          return slotsForDate.length === 0 ? (
+                            <p className="text-gray-600">No available slots for this date</p>
+                          ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {slotsForDate.map((slot) => (
+                                <Button
+                                  key={slot.id}
+                                  variant="outline"
+                                  className={`w-full justify-start text-left p-3 h-auto ${
+                                    selectedSlot?.id === slot.id 
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                      : 'border-gray-200 hover:border-blue-300'
+                                  }`}
+                                  onClick={() => setSelectedSlot(slot)}
+                                >
+                                  <div>
+                                    <div className="font-medium">{formatTime(slot.time)}</div>
+                                    <div className="text-sm text-gray-600">{slot.duration}</div>
+                                  </div>
+                                </Button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600">Select a date from the calendar to view available time slots</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Booking Section */}
@@ -260,86 +372,67 @@ const TutorProfilePage = () => {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Available Time Slots</h4>
-                  {availabilityLoading ? (
-                    <div className="text-center py-4">
-                      <p className="text-gray-600">Loading availability...</p>
+                {selectedSlot ? (
+                  <div>
+                    <div className="p-4 bg-blue-50 rounded-lg mb-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Selected Time Slot</h4>
+                      <p className="text-gray-700">
+                        {formatDate(selectedSlot.date)} at {formatTime(selectedSlot.time)}
+                      </p>
+                      <p className="text-sm text-gray-500">Duration: {selectedSlot.duration}</p>
                     </div>
-                  ) : tutorProfile.availableSlots.length === 0 ? (
-                    <div className="text-center py-4">
-                      <p className="text-gray-600">No available slots</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {tutorProfile.availableSlots.map((slot) => (
-                        <Button
-                          key={slot.id}
-                          variant="outline"
-                          className={`w-full justify-start text-left p-3 h-auto ${
-                            selectedSlot?.id === slot.id 
-                              ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                              : 'border-gray-200 hover:border-blue-300'
-                          }`}
-                          onClick={() => setSelectedSlot(slot)}
-                        >
-                          <div>
-                            <div className="font-medium">{formatDate(slot.date)}</div>
-                            <div className="text-sm text-gray-600">
-                              {formatTime(slot.time)} • {slot.duration}
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
+                          Book This Slot
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Book Session with {tutorProfile.name}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h4 className="font-semibold text-gray-900 mb-2">Selected Time</h4>
+                            <p className="text-gray-700">
+                              {formatDate(selectedSlot.date)} at {formatTime(selectedSlot.time)}
+                            </p>
+                            <p className="text-sm text-gray-500">Duration: {selectedSlot.duration}</p>
+                          </div>
+                          
+                          <div className="p-4 bg-blue-50 rounded-lg">
+                            <h4 className="font-semibold text-gray-900 mb-2">Booking for</h4>
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-semibold text-blue-600">
+                                  {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{currentUser.name}</p>
+                                <p className="text-sm text-gray-600">{currentUser.email}</p>
+                              </div>
                             </div>
                           </div>
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {selectedSlot && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
-                        Book This Slot
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Book Session with {tutorProfile.name}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <h4 className="font-semibold text-gray-900 mb-2">Selected Time</h4>
-                          <p className="text-gray-700">
-                            {formatDate(selectedSlot.date)} at {formatTime(selectedSlot.time)}
-                          </p>
-                          <p className="text-sm text-gray-500">Duration: {selectedSlot.duration}</p>
+                          
+                          <Button 
+                            onClick={handleBooking}
+                            disabled={isBooking}
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                          >
+                            {isBooking ? 'Booking...' : 'Confirm Booking'}
+                          </Button>
                         </div>
-                        
-                        <div className="p-4 bg-blue-50 rounded-lg">
-                          <h4 className="font-semibold text-gray-900 mb-2">Booking for</h4>
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-semibold text-blue-600">
-                                {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{currentUser.name}</p>
-                              <p className="text-sm text-gray-600">{currentUser.email}</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <Button 
-                          onClick={handleBooking}
-                          disabled={isBooking}
-                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                        >
-                          {isBooking ? 'Booking...' : 'Confirm Booking'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-2">Select a time slot from the calendar</p>
+                    <p className="text-sm text-gray-500">Choose a date and time that works for you</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
