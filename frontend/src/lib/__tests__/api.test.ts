@@ -118,4 +118,68 @@ describe('API Client', () => {
       });
     });
   });
+
+  describe('getBulkAvailability', () => {
+    it('should fetch bulk availability for a single date', async () => {
+      const mockResponse = {
+        availability: [
+          {
+            tutor_id: '1',
+            tutor_name: 'Test Tutor',
+            dates: {
+              '2024-01-01': {
+                date: '2024-01-01',
+                total_slots: 3,
+                available_slots: 2,
+                has_availability: true,
+                slots: []
+              }
+            }
+          }
+        ],
+        query: {
+          start_date: '2024-01-01',
+          end_date: '2024-01-02'
+        }
+      };
+
+      (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      } as Response);
+
+      const result = await api.getBulkAvailability('2024-01-01');
+      expect(result).toEqual(mockResponse);
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/v1/availability?date=2024-01-01');
+    });
+
+    it('should fetch bulk availability for a date range', async () => {
+      const mockResponse = {
+        availability: [],
+        query: {
+          start_date: '2024-01-01',
+          end_date: '2024-01-07'
+        }
+      };
+
+      (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      } as Response);
+
+      const result = await api.getBulkAvailability('2024-01-01', '2024-01-07');
+      expect(result).toEqual(mockResponse);
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/v1/availability?start_date=2024-01-01&end_date=2024-01-07');
+    });
+
+    it('should throw APIError when bulk availability fetch fails', async () => {
+      (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Invalid date format' })
+      } as Response);
+
+      await expect(api.getBulkAvailability('invalid-date')).rejects.toThrow(APIError);
+    });
+  });
 }); 
